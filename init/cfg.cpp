@@ -219,37 +219,26 @@ bool _cfg_init(cfg_t* cfg, int flags, char* buf, const char* id) {
         if (cfg != NULL && buf == NULL && cfg->filename != NULL && (flags & CFG_IS_JSON)) {
             cfg->init = false;
         }
-        else
-
-            if (cfg == &cfg_cfg) {
+        else if (cfg == &cfg_cfg) 
+        {
             cfg->filename = CFG_FN;
         }
-        else
-
-            if (cfg == &cfg_adm) {
+        else if (cfg == &cfg_adm) {
             cfg->filename = ADM_FN;
         }
-        else
-
-            if (cfg == &cfg_dx) {
+        else if (cfg == &cfg_dx) {
             cfg->filename = DX_FN;
             flags |= CFG_NO_PARSE | CFG_INT_BASE10 | CFG_NO_INTEG;
         }
-        else
-
-            if (cfg == &cfg_dxcfg) {
+        else if (cfg == &cfg_dxcfg) {
             cfg->filename = DX_CFG_FN;
             flags |= CFG_NO_PARSE | CFG_INT_BASE10;
         }
-        else
-
-            if (cfg == &cfg_dxcomm) {
+        else if (cfg == &cfg_dxcomm) {
             cfg->filename = DX_COMM_FN;
             flags |= CFG_NO_PARSE | CFG_INT_BASE10;
         }
-        else
-
-            if (cfg == &cfg_dxcomm_cfg) {
+        else if (cfg == &cfg_dxcomm_cfg) {
             cfg->filename = DX_COMM_CFG_FN;
             flags |= CFG_NO_PARSE | CFG_INT_BASE10;
         }
@@ -275,11 +264,13 @@ bool _cfg_init(cfg_t* cfg, int flags, char* buf, const char* id) {
 
         if (parse) {
             cfg->init_load = true;
-            if (_cfg_load_json(cfg) == false) {
+            if (_cfg_load_json(cfg) == false) 
+            {
                 if (cfg->flags & CFG_IS_JSON) {
                     lprintf("JSON parse failed: %s\n", cfg->filename);
                     return false;
                 }
+                lprintf("Failed file: %s\n", cfg->filename);
                 panic("cfg_init json");
             }
         }
