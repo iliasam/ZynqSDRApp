@@ -2,3 +2,5 @@ app/a.out
 *.zip
 build
 debug
+.stignore
+.stfolder/
