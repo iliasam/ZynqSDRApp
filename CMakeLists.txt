@@ -51,7 +51,7 @@ pkg_check_modules(UNWIND REQUIRED libunwind)
 pkg_check_modules(SQLite3 REQUIRED sqlite3)
 pkg_check_modules(CURL REQUIRED libcurl)
 
-set(CONFIG_LIBRARIES "/usr/lib/libconfig++.a")
+set(CONFIG_LIBRARIES "/usr/lib/arm-linux-gnueabihf/libconfig++.a")
 
 find_program(CCACHE_FOUND ccache)
 
@@ -232,9 +232,12 @@ target_include_directories(websdr.bin PUBLIC
 
 target_include_directories(websdr.bin PUBLIC ${FFTW3_INCLUDE_DIRS})
 
+
 target_link_directories(websdr.bin PUBLIC
     ${GLFW3_LIBRARY_DIRS}
 )
+
+target_link_libraries(websdr.bin PRIVATE crypt)
 
 target_link_libraries(websdr.bin PRIVATE
     libfftw3f.a libfftw3f_threads.a

@@ -452,7 +452,12 @@ int non_blocking_cmd_pclose(non_blocking_cmd_t* p) {
 
 kstr_t* read_file_string_reply(const char* filename) {
     int n, fd;
-    scall("read_file open", (fd = open(filename, O_RDONLY)));
+    if ((fd = open(filename, O_RDONLY)) < 0)
+    {
+        lprintf("Filename: %s\n", filename);
+        sys_panic("read_file open");
+    }
+    //scall("read_file open", (fd = open(filename, O_RDONLY)));
     char* reply = NULL;
 #define NBUF 256
     char buf[NBUF + SPACE_FOR_NULL];

@@ -44,6 +44,7 @@ Boston, MA  02110-1301, USA.
 #include <stdarg.h>
 #include <time.h>
 #include <sched.h>
+#include <crypt.h>
 
 char* current_authkey;
 

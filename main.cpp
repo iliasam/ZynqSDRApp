@@ -184,11 +184,15 @@ int main(int argc, char* argv[]) {
             version_maj, version_min);
     lprintf("compiled: %s %s on %s\n", __DATE__, __TIME__, COMPILE_HOST);
 
-    char* reply = read_file_string_reply("/etc/alpine-release");
-    if (reply == NULL) panic("debian_version");
-    if (sscanf(kstr_sp(reply), "%d.%d", &debian_maj, &debian_min) != 2) panic("debian_version");
+    //char* reply = read_file_string_reply("/etc/alpine-release");
+    //char *reply = read_file_string_reply("/etc/debian_version");
+    char* reply = read_file_string_reply("/etc/issue");
+    if (reply == NULL) 
+        panic("debian_version1");
+    if (sscanf(kstr_sp(reply), "%*s %d.%d", &debian_maj, &debian_min) != 2) 
+        panic("debian_version2");
     kstr_free(reply);
-    lprintf("/etc/debian_version %d.%d\n", debian_maj, debian_min);
+    lprintf("Ubuntu Version: %d.%d\n", debian_maj, debian_min);
 
 #if defined(USE_ASAN)
     lprintf("### compiled with USE_ASAN\n");
