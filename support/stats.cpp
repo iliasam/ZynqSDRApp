@@ -245,12 +245,6 @@ static void webserver_collect_print_stats(int print) {
         last_hour = hour;
     }
 
-    // call every minute at the top of the minute
-    if (min != last_min) {
-        schedule_update(min);
-        last_min = min;
-    }
-
     rx_autorun_restart_victims(false);
 }
 

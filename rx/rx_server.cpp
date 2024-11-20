@@ -210,7 +210,6 @@ void rx_server_remove(conn_t* c) {
     int task = c->task;
     int cn = c->self_idx;
     conn_init(c);
-    check_for_update(WAIT_UNTIL_NO_USERS, NULL);
     conn_printf("CONN-%02d rx_server_remove %p %s\n", cn, c, Task_ls(task));
     TaskRemove(task);
 }

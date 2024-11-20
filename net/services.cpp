@@ -597,67 +597,7 @@ static void pub_NET(void* param) {
     if (!okay) lprintf("IPINFO: ### FAILED for all ipinfo servers ###\n");
 }
 
-/*
-static void git_commits(void *param)
-{
-    int i, n, status;
-    char *reply;
 
-    reply = non_blocking_cmd("git log --format='format:%h %ad %s' --grep='^v[1-9]' --grep='^release v[1-9]' | head", &status);
-    char *rp = kstr_sp(reply);
-
-    if (status >= 0 && reply != NULL) {
-        //TaskSleepSec(15);
-        while (*rp != '\0') {
-            char *rpe = strchr(rp, '\n');
-            if (rpe == NULL)
-                break;
-            int slen = rpe - rp;
-
-            char sha[16], date[16], time[16], tz[16], msg[256];
-            int vmaj, vmin;
-            n = sscanf(rp, "%15s %15s %15s %15s v%d.%d: %255[^\n]", sha, date, time, tz, &vmaj, &vmin, msg);
-            if (n != 7)
-                n = sscanf(rp, "%15s %15s %15s %15s release v%d.%d: %255[^\n]", sha, date, time, tz, &vmaj, &vmin, msg);
-            if (n != 7) {
-                printf("GIT ERROR <%.*s>\n", slen, rp);
-            } else {
-                //printf("<%.*s>\n", slen, rp);
-                printf("%s v%d.%d \"%s\"\n", sha, vmaj, vmin, msg);
-            }
-            rp = rpe + 1;
-        }
-    }
-
-    kstr_free(reply);
-}
-*/
-
-
-/*
-    // task
-    reg_kiwi()
-        status = non_blocking_cmd_func_forall(cmd, _reg_kiwi)
-            if (WIFEXITED(status) && (exit_status = WEXITSTATUS(status)))
-                retrytime_mins = exit_status;
-
-    non_blocking_cmd_func_forall(cmd, func)
-        return status = child_task(_non_blocking_cmd_forall, cmd, func)
-
-    child_task(func)
-        if (fork())
-            // child
-            func() -> _non_blocking_cmd_forall(cmd, func)
-                result = popen(cmd)
-                rv = func(result) -> _reg_kiwi(result)
-                                        if (result) ...
-                child_exit(rv)
-
-        // parent
-        while
-            waitpid(&status)
-        return status
-*/
 
 // routine that processes the output of the registration curl command
 

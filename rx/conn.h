@@ -25,7 +25,6 @@ Boston, MA  02110-1301, USA.
 #include "nbuf.h"           // ndesc_t
 #include "ext.h"            // ext_t
 #include "non_block.h"      // non_blocking_cmd_t
-#include "update.h"         // update_check_e
 #include "datatypes.h"      // TYPECPX
 #include "rx_server_ajax.h" // AJAX_*
 
@@ -116,7 +115,7 @@ typedef struct conn_st {
     bool adjust_clock; // should this connections clock be adjusted?
     double adc_clock_corrected, manual_offset, srate;
     u4_t arrival;
-    update_check_e update_check;
+    uint8_t update_check;//To delete!
     int nloop;
     char* geo;
     bool try_geoloc;

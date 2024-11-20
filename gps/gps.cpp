@@ -151,15 +151,14 @@ static double t_rx = 0;
 
 static void pps_task(void* param) {
     fpga_start_pps();
-    clock_reset_correction();
 
     for (;;) {
         // fetch pps data
         u64_t ticks;
         ticks = fpga_read_pps();
 
-        if (ticks && t_rx)
-            clock_correction(t_rx, ticks);
+        //if (ticks && t_rx)
+        //    clock_correction(t_rx, ticks);
 
         TaskSleepSec(1);
     }

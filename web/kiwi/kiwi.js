@@ -2462,7 +2462,7 @@ function config_cb(rx_chans, gps_chans, serno, pub, port_ext, pvt, port_int, nm,
 {
 	var s;
 	config_str_update(rx_chans, gps_chans, vmaj, vmin);
-	w3_innerHTML('id-msg-debian', 'Alpine '+ dmaj +'.'+ dmin + ', DNA: ' + dna + ', Serial #: ' + serno);
+	w3_innerHTML('id-msg-debian', 'Ubuntu '+ dmaj +'.'+ dmin + ', DNA: ' + dna + ', Serial #: ' + serno);
 	kiwi.debian_maj = dmaj;
 	kiwi.debian_min = dmin;
 

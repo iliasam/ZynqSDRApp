@@ -480,7 +480,7 @@ void c2s_admin(void* param) {
 
                 // copy config file to sd card
                 sd_enable(true);
-                system("cp -u /root/config/* /media/mmcblk0p1/config/");
+                //system("cp -u /root/config/* /media/mmcblk0p1/config/");
                 sd_enable(false);
 
                 system("/etc/init.d/frpc restart");
@@ -550,19 +550,6 @@ void c2s_admin(void* param) {
             ////////////////////////////////
             // dx
             ////////////////////////////////
-
-
-            ////////////////////////////////
-            // update
-            ////////////////////////////////
-
-            int force_check, force_build;
-            i = sscanf(cmd, "SET force_check=%d force_build=%d", &force_check, &force_build);
-            if (i == 2) {
-                check_for_update(force_build ? FORCE_BUILD : FORCE_CHECK, conn);
-                continue;
-            }
-
 
 ////////////////////////////////
 // backup

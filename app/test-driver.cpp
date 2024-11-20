@@ -10,9 +10,6 @@
 #include <sys/ioctl.h>
 #include <time.h>
 
-#include "../si5351/LinuxInterface.h"
-#include "../si5351/i2c.cpp"
-#include "../si5351/si5351.cpp"
 #include "../zynq/ioctl.h"
 
 static const uint8_t buss_id = 0;
@@ -24,20 +21,12 @@ int main() {
     struct timespec start_spec, stop_spec;
 
     printf("sysconf(_SC_PAGESIZE)=%ld\n", sysconf(_SC_PAGESIZE));
-    // initialize si5351
-    auto i2c = new LinuxInterface(buss_id, chip_addr);
-    auto si5351 = new Si5351(chip_addr, i2c);
-
 
     int ad8370_fd = open("/dev/zynqsdr", O_RDWR | O_SYNC);
 
     int int_clk = 1;
     ioctl(ad8370_fd, CLK_SET, &int_clk);
 
-    bool i2c_found = si5351->init(SI5351_CRYSTAL_LOAD_0PF, 27000000, 0);
-
-    int ret = si5351->set_freq((uint64_t)122880000 * 100, SI5351_CLK0);
-    printf("i2c si5351 initialized, error=%d\n", ret);
 
     // map config space
     int rc;
