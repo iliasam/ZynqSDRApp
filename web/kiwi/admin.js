@@ -2211,7 +2211,7 @@ function console_html()
 	w3_div('id-console w3-margin-top w3-text-teal w3-hide',
 		w3_div('w3-container',
 		   w3_div('',
-            w3_label('w3-show-inline', 'Alipne Linux console'),
+            w3_label('w3-show-inline', 'Ubuntu Linux console'),
             w3_button('w3-aqua|margin-left:10px', 'Connect', 'console_connect_cb'),
 
 

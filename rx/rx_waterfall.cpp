@@ -909,7 +909,8 @@ static void sample_wf(int rx_chan) {
             fpga_reset_wf(wf_chan, false);
         }
 
-        fpga_read_wf(wf_chan, sample_data, sizeof(iq_t) * WF_C_NSAMPS);
+        //fpga_read_wf(wf_chan, sample_data, sizeof(iq_t) * WF_C_NSAMPS);
+        fpga_read_wf2(wf_chan, sample_data, sizeof(iq_t) * WF_C_NSAMPS, WF_C_NSAMPS);
 
         if (kiwi.wf_share)
             fpga_free_wf(wf_chan, rx_chan);

@@ -151,6 +151,12 @@ void fpga_rxfreq(int rx_chan, uint64_t freq) {
     //    lprintf("Set RX freq failed");
 }
 
+void fpga_read_rx2(void* buf, uint32_t size, uint32_t nsamples)
+{
+    memset(buf, 0, size);
+    TaskSleepUsec(nsamples * 83); //12 khz
+}
+
 void fpga_read_rx(void* buf, uint32_t size) {
     memset(buf, 0, size);
     /*
@@ -328,7 +334,14 @@ void fpga_free_wf(int wf_chan, int rx_chan) {
     if (ret) panic("sem_post failed");
 }
 
-void fpga_read_wf(int wf_chan, void* buf, uint32_t size) {
+void fpga_read_wf2(int wf_chan, void* buf, uint32_t size, uint32_t nsamples)
+{
+    memset(buf, 0, size);
+    TaskSleepUsec(100);
+}
+
+void fpga_read_wf(int wf_chan, void* buf, uint32_t size) 
+{
     memset(buf, 0, size);
     /*
     int rc;
