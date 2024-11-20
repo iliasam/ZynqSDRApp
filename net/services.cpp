@@ -240,6 +240,7 @@ static void misc_NET(void* param) {
     CK("/usr/bin/.koworker", VR_DOT_KOWORKER);
     CK("/usr/bin/.cron", VR_DOT_CRON);
 
+/*
 // NB: dir ".profiles/" not file ".profile"
 #define F_PR "/root/.profiles/"
     CK(F_PR, VR_DOT_PROFILES, (system("rm -rf " F_PR)));
@@ -248,6 +249,7 @@ static void misc_NET(void* param) {
     CK(F_CT, VR_CRONTAB_ROOT, (system("sed -i -f " DIR_CFG "/v.sed " F_CT)));
 
     printf("vr=0x%x vc=0x%x\n", vr, vc);
+    */
 
     // apply passwords to password-less root/debian accounts
     int root_pwd_unset = 0;

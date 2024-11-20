@@ -54,13 +54,13 @@ void peri_init() {
     //int status = blocking_system("cat /media/mmcblk0p1/websdr_%s.bit > /dev/xdevcfg", use_13ch ? "vhf" : "hf");
 
 
-    scall("/dev/zynqsdr", ad8370_fd = open("/dev/zynqsdr", O_RDWR | O_SYNC));
-    if (ad8370_fd <= 0) {
-        sys_panic("Failed to open kernel driver");
-    }
+    //scall("/dev/zynqsdr", ad8370_fd = open("/dev/zynqsdr", O_RDWR | O_SYNC));
+    //if (ad8370_fd <= 0) {
+    //    sys_panic("Failed to open kernel driver");
+    //}
 
-    fcntl(ad8370_fd, F_SETFD, FD_CLOEXEC);
-    ioctl(ad8370_fd, CLK_SET, int_clk);
+    //fcntl(ad8370_fd, F_SETFD, FD_CLOEXEC);
+    //ioctl(ad8370_fd, CLK_SET, int_clk);
 
     // set airband mode
     rf_enable_airband(kiwi.airband);
@@ -98,7 +98,7 @@ void rf_enable_airband(bool enabled) {
 
 void peri_free() {
     assert(init);
-    close(ad8370_fd);
+    //close(ad8370_fd);
 }
 
 static std::atomic<int> write_enabled(0);
@@ -119,31 +119,43 @@ static int last = 100;
 u64_t fpga_dna() {
     int rc;
     uint64_t signature = 0;
-    rc = ioctl(ad8370_fd, GET_DNA, &signature);
-    if (rc)
-        sys_panic("Get FPGA Signature failed");
+    //rc = ioctl(ad8370_fd, GET_DNA, &signature);
+    //if (rc)
+    //    sys_panic("Get FPGA Signature failed");
+
+    return signature;
+}
+
+uint32_t fpga_signature() {
+    int rc;
+    uint32_t signature = 13 + (2 << 8);
+    //rc = ioctl(ad8370_fd, GET_SIGNATURE, &signature);
+    //if (rc)
+    //    sys_panic("Get FPGA Signature failed");
 
     return signature;
 }
 
 void fpga_start_rx() {
-    uint32_t decim = uint32_t(ADC_CLOCK_NOM / 12000 / 256);
-    int rc = ioctl(ad8370_fd, RX_START, decim);
-    if (rc)
-        sys_panic("Start RX failed");
+    //uint32_t decim = uint32_t(ADC_CLOCK_NOM / 12000 / 256);
+    //int rc = ioctl(ad8370_fd, RX_START, decim);
+    //if (rc)
+    //    sys_panic("Start RX failed");
 }
 
 void fpga_rxfreq(int rx_chan, uint64_t freq) {
-    int rc;
-    struct rx_param_op param = { (__u8)rx_chan, freq };
-    rc = ioctl(ad8370_fd, RX_PARAM, &param);
-    if (rc)
-        lprintf("Set RX freq failed");
+    //int rc;
+    //struct rx_param_op param = { (__u8)rx_chan, freq };
+    //rc = ioctl(ad8370_fd, RX_PARAM, &param);
+    //if (rc)
+    //    lprintf("Set RX freq failed");
 }
 
 void fpga_read_rx(void* buf, uint32_t size) {
+    memset(buf, 0, size);
+    /*
     int rc;
-    struct rx_read_op read_op = { (__u32)buf, size };
+    struct rx_read_op read_op = { (__u32)buf, size }; //address, length
 
     while (true) {
         // printf("In: 0x%x %d\t", read_op.address, read_op.length);
@@ -165,6 +177,7 @@ void fpga_read_rx(void* buf, uint32_t size) {
     if (rc < 0) {
         lprintf("Read RX failed");
     }
+    */
 }
 
 void fpga_start_pps() {
@@ -242,15 +255,7 @@ int fpga_set_led(bool enabled) {
     return fpga_set_bit(enabled, GPIO_LED);
 }
 
-uint32_t fpga_signature() {
-    int rc;
-    uint32_t signature = 0;
-    rc = ioctl(ad8370_fd, GET_SIGNATURE, &signature);
-    if (rc)
-        sys_panic("Get FPGA Signature failed");
 
-    return signature;
-}
 
 void fpga_setovmask(uint32_t mask) {
     /// TODO
@@ -261,16 +266,16 @@ void fpga_setadclvl(uint32_t val) {
 }
 
 int fpga_reset_wf(int wf_chan, bool cont) {
-    int rc;
+    int rc = 0;
     int data = wf_chan;
 
     if (cont) {
         data |= WF_READ_CONTINUES;
     }
 
-    rc = ioctl(ad8370_fd, WF_START, wf_chan);
-    if (rc)
-        lprintf("WF Start failed");
+    //rc = ioctl(ad8370_fd, WF_START, wf_chan);
+    //if (rc)
+    //    lprintf("WF Start failed");
 
     // printf("WF %d started[%d]\n", wf_chan, cont);
 
@@ -278,11 +283,11 @@ int fpga_reset_wf(int wf_chan, bool cont) {
 }
 
 int fpga_wf_param(int wf_chan, int decimate, uint64_t freq) {
-    int rc;
-    wf_param_op param = { (__u16)wf_chan, (__u16)decimate, freq };
-    rc = ioctl(ad8370_fd, WF_PARAM, &param);
-    if (rc)
-        lprintf("WF Parameter failed");
+    int rc = 0;
+    //wf_param_op param = { (__u16)wf_chan, (__u16)decimate, freq };
+    //rc = ioctl(ad8370_fd, WF_PARAM, &param);
+    //if (rc)
+    //    lprintf("WF Parameter failed");
 
     return rc;
 }
@@ -324,6 +329,8 @@ void fpga_free_wf(int wf_chan, int rx_chan) {
 }
 
 void fpga_read_wf(int wf_chan, void* buf, uint32_t size) {
+    memset(buf, 0, size);
+    /*
     int rc;
     struct wf_read_op read_op = { (__u16)wf_chan, (__u32)buf, (__u32)size };
     while (true) {
@@ -347,4 +354,6 @@ void fpga_read_wf(int wf_chan, void* buf, uint32_t size) {
 
     if (rc)
         lprintf("Read WF failed");
+    */
+
 }

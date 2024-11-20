@@ -56,9 +56,6 @@ extern int rx_chans, wf_chans, nrx_bufs, nrx_samps, snd_rate, rx_decim;
 #define PHOTO_UPLOAD_MAX_SIZE (2 * M)
 #define DX_UPLOAD_MAX_SIZE    (2 * M)
 
-#define DIR_CFG         "/home/ubuntu/sdr/config"
-#define DIR_SAMPLES     "/home/ubuntu/sdr/config/config/samples"
-
 typedef struct {
     const char *param, *value;
 } index_html_params_t;

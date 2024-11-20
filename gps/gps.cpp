@@ -52,8 +52,8 @@ void gps_main(int argc, char* argv[]) {
     lock_init(&gps_lock);
 
     // create a task to pull gps
-    CreateTaskF(gps_task, 0, GPS_PRIORITY, CTF_NO_LOG);
-    CreateTaskF(pps_task, 0, GPS_PRIORITY, CTF_NO_LOG);
+    //CreateTaskF(gps_task, 0, GPS_PRIORITY, CTF_NO_LOG);
+    //CreateTaskF(pps_task, 0, GPS_PRIORITY, CTF_NO_LOG);
 }
 
 /* convert calendar day/time to time -------------------------------------------

@@ -272,8 +272,8 @@ set(DIR_DATA /tmp/kiwi.data)
 target_compile_definitions(websdr.bin PUBLIC
     VERSION_MAJ=${CURRENT_YEAR} VERSION_MIN=${CURRENT_MONTH_DAY}
     KIWI KIWISDR
-    DIR_CFG2="/root/config"
-    DIR_SAMPLES2="/media/mmcblk0p1/config/samples"
+    DIR_CFG="/home/ubuntu/sdr/config"
+    DIR_SAMPLES="/home/ubuntu/sdr/config/samples"
     CFG_PREFIX=""
     DIR_DATA=STRINGIFY\(${DIR_DATA}\)
     BUILD_DIR="${PROJECT_BINARY_DIR}"

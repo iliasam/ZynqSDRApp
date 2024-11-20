@@ -194,12 +194,15 @@ static void webserver_collect_print_stats(int print) {
         // printf("Tempture scale: %f offset: %f raw: %f => Temp=%d\n", t_scale, t_offset, raw_value, temp_deg_mC);
 
         // find out cpu freq
+        /*
         const char* cpufreq_path = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq";
         {
             kstr_t* reply = read_file_string_reply(cpufreq_path);
             sscanf(kstr_sp(reply), "%u", &cpufreq_kHz);
             kstr_free(reply);
         }
+        */
+        cpufreq_kHz = 666666;
 
         // ecpu_use() below can thread block, so cpu_stats_buf must be properly set NULL for reading thread
         kstr_t* ks;
