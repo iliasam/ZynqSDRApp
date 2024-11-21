@@ -138,9 +138,9 @@ void rx_sound_cmd(conn_t* conn, double frate, int n, char* cmd) {
             bool new_freq = false;
             if (s->freq != _freq) {
                 s->freq = _freq;
-                double freq_kHz = s->freq * kHz;
-                double freq_inv_kHz = ui_srate - freq_kHz;
-                f_phase = (s->spectral_inversion ? freq_inv_kHz : freq_kHz) / conn->adc_clock_corrected;
+                double freq_Hz = s->freq * kHz;
+                double freq_inv_Hz = ui_srate - freq_Hz;
+                f_phase = (s->spectral_inversion ? freq_inv_Hz : freq_Hz) / conn->adc_clock_corrected;
                 i_phase = (u64_t)round(f_phase * pow(2, 48));
                 // cprintf(conn, "SND SET freq %.3f kHz i_phase 0x%08x|%08x clk %.6f rx_chan=%d\n",
                 //     s->freq, PRINTF_U64_ARG(i_phase), conn->adc_clock_corrected, rx_chan);

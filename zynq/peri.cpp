@@ -36,6 +36,16 @@ static sem_t wf_sem;
 static std::atomic<int> wf_using[4];
 static int wf_channels;
 
+struct iq2_t {
+    s2_t i, q;
+} __attribute__((packed));
+
+s4_t  rnd_snd_data[1024*16];
+iq2_t  rnd_wf_data[1024*8];
+
+
+//*****************************************************
+
 void peri_init() {
     if (init)
         return;
@@ -70,6 +80,17 @@ void peri_init() {
 
     wf_channels = (fpga_signature() >> 8) & 0x0f;
     sem_init(&wf_sem, 0, wf_channels);
+
+    for (int i = 0; i < 1024*16; i++)
+    {
+        rnd_snd_data[i] = (s4_t)(random() % 1024) - (s4_t)512;
+    }
+
+    for (int i = 0; i < 1024*8; i++)
+    {
+        rnd_wf_data[i].i = (s2_t)(random() % 256) - (s2_t)128;
+        rnd_wf_data[i].q = (s2_t)(random() % 256) - (s2_t)128;
+    }
 
     init = TRUE;
 }
@@ -143,7 +164,7 @@ void fpga_start_rx() {
     //    sys_panic("Start RX failed");
 }
 
-void fpga_rxfreq(int rx_chan, uint64_t freq) {
+void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
     //int rc;
     //struct rx_param_op param = { (__u8)rx_chan, freq };
     //rc = ioctl(ad8370_fd, RX_PARAM, &param);
@@ -153,7 +174,25 @@ void fpga_rxfreq(int rx_chan, uint64_t freq) {
 
 void fpga_read_rx2(void* buf, uint32_t size, uint32_t nsamples)
 {
-    memset(buf, 0, size);
+    int total_size_bytes = size;
+    int single_size_bytes = 0;
+
+    void *desp_p = buf;
+
+    do
+    {
+        if (total_size_bytes > sizeof(rnd_snd_data))
+            single_size_bytes = sizeof(rnd_snd_data);
+        else
+            single_size_bytes = total_size_bytes;
+
+        memcpy(desp_p, rnd_snd_data, single_size_bytes);
+        desp_p += single_size_bytes;
+
+        total_size_bytes -= single_size_bytes;
+    } while (total_size_bytes > 0);
+
+    //memset(buf, 0, size);
     TaskSleepUsec(nsamples * 83); //12 khz
 }
 
@@ -288,7 +327,7 @@ int fpga_reset_wf(int wf_chan, bool cont) {
     return rc;
 }
 
-int fpga_wf_param(int wf_chan, int decimate, uint64_t freq) {
+int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase) {
     int rc = 0;
     //wf_param_op param = { (__u16)wf_chan, (__u16)decimate, freq };
     //rc = ioctl(ad8370_fd, WF_PARAM, &param);
@@ -336,7 +375,8 @@ void fpga_free_wf(int wf_chan, int rx_chan) {
 
 void fpga_read_wf2(int wf_chan, void* buf, uint32_t size, uint32_t nsamples)
 {
-    memset(buf, 0, size);
+    //memset(buf, 0, size);
+    memcpy(buf, rnd_wf_data, size);
     TaskSleepUsec(100);
 }
 

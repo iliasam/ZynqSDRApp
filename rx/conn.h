@@ -113,7 +113,9 @@ typedef struct conn_st {
     u1_t* oob_buf;
 
     bool adjust_clock; // should this connections clock be adjusted?
-    double adc_clock_corrected, manual_offset, srate;
+    /// @brief In Hz
+    double adc_clock_corrected;
+    double manual_offset, srate;
     u4_t arrival;
     uint8_t update_check;//To delete!
     int nloop;

@@ -229,8 +229,13 @@ void c2s_waterfall(void* param) {
     bool new_map = false, new_scale_mask = false;
     bool spectral_inversion = kiwi.spectral_inversion;
     int wband = -1, _wband, zoom = -1, _zoom, scale = 1, _scale, _speed, cmap, aper, algo, _dvar, _pipe;
-    float start = -1, _start, cf, aper_param;
+
+    /// @brief in Hz
+    float cf;
+    float start = -1, _start, aper_param;
     float samp_wait_us;
+
+    /// @brief in Hz ?
     float off_freq, off_freq_inv;
     float HZperStart = ui_srate / (WF_WIDTH << MAX_ZOOM);
     u64_t i_offset;

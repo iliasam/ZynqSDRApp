@@ -29,7 +29,7 @@ extern void fpga_start_rx();
 extern void fpga_read_rx(void* buf, uint32_t size);
 extern void fpga_read_rx2(void* buf, uint32_t size, uint32_t nsamples);
 
-extern void fpga_rxfreq(int rx_chan, uint64_t freq);
+extern void fpga_rxfreq(int rx_chan, uint64_t i_phase);
 
 extern void fpga_start_pps();
 extern uint64_t fpga_read_pps();
@@ -45,7 +45,7 @@ extern void fpga_setovmask(uint32_t mask);
 extern void fpga_setadclvl(uint32_t val);
 
 extern int fpga_reset_wf(int wf_chan, bool cont);
-extern int fpga_wf_param(int wf_chan, int decimate, uint64_t freq);
+extern int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase);
 extern int fpga_get_wf(int rx_chan);
 extern void fpga_free_wf(int wf_chan, int rx_chan);
 extern void fpga_read_wf(int wf_chan, void* buf, uint32_t size);

@@ -53,8 +53,8 @@ void clock_init() {
     }
     else {
         adc_clock_hz = ADC_CLOCK_HF;
-        if (kiwi.narrowband)
-            adc_clock_hz /= 2;
+        //if (kiwi.narrowband)
+        //    adc_clock_hz /= 2;
     }
 
     clk.do_corrections = cfg_int("ADC_clk2_corr", &err, CFG_OPTIONAL);

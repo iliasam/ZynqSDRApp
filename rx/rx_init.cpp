@@ -124,7 +124,10 @@ void cfg_adm_transition() {
 
 int inactivity_timeout_mins, ip_limit_mins;
 int S_meter_cal, waterfall_cal;
-double ui_srate, ui_srate_kHz, freq_offset_kHz, freq_offmax_kHz;
+
+/// @brief in Hz
+double ui_srate;
+double ui_srate_kHz, freq_offset_kHz, freq_offmax_kHz;
 int kiwi_reg_lo_kHz, kiwi_reg_hi_kHz;
 float max_thr;
 int n_camp;
