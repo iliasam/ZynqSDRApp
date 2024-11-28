@@ -22,15 +22,22 @@
 #include "arm_math.h"
 
 #include "ioctl.h"
+#include <linux/spi/spidev.h>
+
+#define SPI_CMD_SET_RX_FREQ     1
 
 static bool init;
 
 static const uint8_t buss_id = 0;
 static const uint8_t chip_addr = 0x60;
 
+static uint32_t SPI_SPEED = 5000000;
+static uint8_t SPI_BITS = 8;//per word
 
 
 static int ad8370_fd;
+
+static int sdr_spi_fd;
 
 static sem_t wf_sem;
 static std::atomic<int> wf_using[4];
@@ -63,6 +70,7 @@ void peri_init() {
     // load fpga bitstream
     //int status = blocking_system("cat /media/mmcblk0p1/websdr_%s.bit > /dev/xdevcfg", use_13ch ? "vhf" : "hf");
 
+    scall("/dev/spidev0.0", sdr_spi_fd = open("/dev/spidev0.0", O_RDWR));
 
     //scall("/dev/zynqsdr", ad8370_fd = open("/dev/zynqsdr", O_RDWR | O_SYNC));
     //if (ad8370_fd <= 0) {
@@ -119,7 +127,7 @@ void rf_enable_airband(bool enabled) {
 
 void peri_free() {
     assert(init);
-    //close(ad8370_fd);
+    close(sdr_spi_fd);
 }
 
 static std::atomic<int> write_enabled(0);
@@ -132,7 +140,39 @@ void sd_enable(bool write) {
 
 static int last = 100;
 
+void spi_transfer(int fd, uint8_t *tx, uint8_t *rx, size_t len)
+{
+	int ret;
+	struct spi_ioc_transfer tr = {
+		.tx_buf = (unsigned long)tx,
+		.rx_buf = (unsigned long)rx,
+		.len = len,
+        .speed_hz = SPI_SPEED,
+		.delay_usecs = 0,
+		.bits_per_word = SPI_BITS,
+	};
 
+    /*
+	if (mode & SPI_TX_QUAD)
+		tr.tx_nbits = 4;
+	else if (mode & SPI_TX_DUAL)
+		tr.tx_nbits = 2;
+	if (mode & SPI_RX_QUAD)
+		tr.rx_nbits = 4;
+	else if (mode & SPI_RX_DUAL)
+		tr.rx_nbits = 2;
+	if (!(mode & SPI_LOOP)) {
+		if (mode & (SPI_TX_QUAD | SPI_TX_DUAL))
+			tr.rx_buf = 0;
+		else if (mode & (SPI_RX_QUAD | SPI_RX_DUAL))
+			tr.tx_buf = 0;
+	}
+    */
+
+	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	if (ret < 1)
+		printf("can't send spi message");
+}
 ////////////////////////////////
 // FPGA DNA
 ////////////////////////////////
@@ -165,11 +205,24 @@ void fpga_start_rx() {
 }
 
 void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
-    //int rc;
-    //struct rx_param_op param = { (__u8)rx_chan, freq };
-    //rc = ioctl(ad8370_fd, RX_PARAM, &param);
-    //if (rc)
-    //    lprintf("Set RX freq failed");
+
+    uint8_t payload_tx[6];
+    uint8_t payload_rx[6];
+
+    payload_tx[0] = SPI_CMD_SET_RX_FREQ;
+    payload_tx[1] = (uint8_t)rx_chan;
+
+    //printf("SPI1: %lu\n", (uint32_t)i_phase);
+
+
+    payload_tx[2] = (uint8_t)(((uint32_t)i_phase & 0xFF000000) >> 24);
+    payload_tx[3] = (uint8_t)(((uint32_t)i_phase & 0x00FF0000) >> 16);
+    payload_tx[4] = (uint8_t)(((uint32_t)i_phase & 0x0000FF00) >> 8);
+    payload_tx[5] = (uint8_t)(((uint32_t)i_phase & 0x000000FF) >> 0);
+
+    spi_transfer(sdr_spi_fd, payload_tx, payload_rx, sizeof(payload_tx));
+
+    printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
 void fpga_read_rx2(void* buf, uint32_t size, uint32_t nsamples)

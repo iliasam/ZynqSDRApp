@@ -15,6 +15,9 @@
 #define GPIO_PGA    (1 << 7)
 #define GPIO_LED    (1 << 8)
 
+#define RX_SOUND_DDS_RESOLUTION     32 //bits
+
+
 void peri_init();
 void peri_free();
 

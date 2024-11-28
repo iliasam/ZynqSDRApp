@@ -334,8 +334,8 @@ void c2s_sound(void* param) {
             double freq_kHz = s->freq * kHz;
             double freq_inv_kHz = ui_srate - freq_kHz;
             f_phase = (s->spectral_inversion ? freq_inv_kHz : freq_kHz) / conn->adc_clock_corrected;
-            i_phase = (u64_t)round(f_phase * pow(2, 48));
-            // cprintf(conn, "SND UPD freq %.3f kHz i_phase 0x%08x|%08x clk %.6f(%d)\n",
+            i_phase = (u64_t)round(f_phase * pow(2, RX_SOUND_DDS_RESOLUTION));
+            //cprintf(conn, "SND UPD freq %.3f kHz i_phase 0x%08x|%08x clk %.6f(%d)\n",
             //     s->freq, PRINTF_U64_ARG(i_phase), conn->adc_clock_corrected, clk.adc_clk_corrections);
             fpga_rxfreq(rx_chan, i_phase);
 
