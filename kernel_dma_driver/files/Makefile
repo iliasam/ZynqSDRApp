@@ -1,11 +1,13 @@
 obj-m := sdrdma.o
+sdrdma-objs := sdrdma_main.o sfifo.o
 
-MY_CFLAGS += -g -DDEBUG
+MY_CFLAGS += -g -DDEBUG -I $(shell pwd)
 ccflags-y += ${MY_CFLAGS}
 
 SRC := $(shell pwd)
 
 all:
+	$(info    MY_CFLAGS is $(MY_CFLAGS))
 	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)
 
 modules_install:

@@ -11,9 +11,12 @@
 #include <linux/uaccess.h> 
 #include <linux/fs.h>
 #include <asm/io.h>
+#include <linux/workqueue.h>
 
+#include "sfifo.h"
 
-#//include <sys/mman.h>
+//#include <linux/kfifo.h>
+
 
 /* Standard module information, edit as appropriate */
 MODULE_LICENSE("GPL");
@@ -30,53 +33,102 @@ MODULE_DESCRIPTION
 #define BURST_SIZE 			(CH_COUNT * 2) //I+Q, size is 4byte words
 #define BUFFER_SIZE_WORDS   (BURST_SIZE * BUFFER_LENGTH)
 
-#define STATE_WORD_OFFSET	(0x1F400000)//DMA state address = 500MByte
-//#define RAM_WORD_OFFSET		(0x1F400004)//RAM start address = 500MByte + 4byte
+//#define SOUND_FIFO_LENGTH_WORDS   (1 << 14)
+
+//#define BUFFER_SIZE_BYTES   (BUFFER_SIZE_WORDS * sizeof(uint32_t))
+#define SOUND_FIFO_ITEMS    (3)
+
+
+#define SOUND_STATE_WORD_OFFSET	(0x1F400000)//DMA state address = 500MByte
+
+
 
 struct sdrdma_local {
 	int irq;
+	uint8_t last_dma_buf;//last filled
     uint32_t *dma_fast_buf0;
     uint32_t *dma_fast_buf1;
     volatile unsigned long *virtual_base;
     uint8_t is_init;
     uint8_t test_cnt;
 	//void __iomem *base_addr;
+	
+	//DECLARE_KFIFO(sound_rx_fifo, uint32_t, SOUND_FIFO_LENGTH_WORDS);
+	
 };
+
+static struct sdrdma_local *global_drv_state_p = NULL;
+
+static uint32_t sound_fifo_buf[BUFFER_SIZE_WORDS * SOUND_FIFO_ITEMS];
+static sfifo_t sound_fifo;
+
 
 
 //##########################################################################
 
+void workqueue_fn(struct work_struct *work); 
+ 
+/*Creating work by Static Method */
+DECLARE_WORK(workqueue, workqueue_fn);
+
+/*Workqueue Function*/
+void workqueue_fn(struct work_struct *work)
+{
+	if (global_drv_state_p == NULL)
+		return;
+	
+	//if (global_drv_state_p->last_dma_buf == 0)
+	//	kfifo_in(&global_drv_state_p->sound_rx_fifo, global_drv_state_p->dma_fast_buf0, BUFFER_SIZE_WORDS);
+	
+	if (global_drv_state_p->last_dma_buf == 0)
+	{
+		sfifo_put(&sound_fifo, (void *)global_drv_state_p->dma_fast_buf0);
+	}
+	
+	//TEST
+	if (global_drv_state_p->test_cnt >= 20)
+		return;
+		
+	
+		
+	uint32_t fifo_amount = sound_fifo.amount;
+	printk(KERN_INFO "work idx %d, fifo=%d\n", global_drv_state_p->last_dma_buf, fifo_amount);
+	
+	
+}
+
+
 static irqreturn_t sdrdma_irq(int irq, void *lp_p)
 {
 	struct sdrdma_local *lp = lp_p;
+	uint32_t dma_state;
 	//uint32_t dma_dat;
-	
-	//printk("sdrdma interrupt\n");
 	
     if (lp->is_init == 0)
     {
         return IRQ_HANDLED;
     }
+
+	dma_state = ioread32(lp->virtual_base);//number of buffer that is filled and ready now
+    	
+    if (dma_state == 0)
+	{
+   		ioread32_rep(lp->virtual_base + 1, lp->dma_fast_buf0, BUFFER_SIZE_WORDS);
+	}
+	else
+  	{
+		ioread32_rep(lp->virtual_base + 1 + BUFFER_SIZE_WORDS, lp->dma_fast_buf1, BUFFER_SIZE_WORDS);
+    }
+    lp->last_dma_buf = dma_state;
+    	
+	//printk("sdrdma: %d dat: 0x%08x \n", dma_state, dma_dat);
+	schedule_work(&workqueue);
     
+        
     if (lp->test_cnt < 20)
     {
     	lp->test_cnt++;
-    	
-    	uint32_t dma_state = ioread32(lp->virtual_base);//number of buffer that is filled and ready now
-    	
-    	if (dma_state == 0)
-    	{
-    		//dma_dat = ioread32(lp->virtual_base + 1);
-    		ioread32_rep(lp->virtual_base + 1, lp->dma_fast_buf0, BUFFER_SIZE_WORDS);
-    	}
-    	else
-    	{
-    		//dma_dat = ioread32(lp->virtual_base + 1 + BUFFER_SIZE_WORDS);
-    		ioread32_rep(lp->virtual_base + 1 + BUFFER_SIZE_WORDS, lp->dma_fast_buf1, BUFFER_SIZE_WORDS);
-    	}
-    	
-    	//printk("sdrdma: %d dat: 0x%08x \n", dma_state, dma_dat);
-    	printk("sdrdma: %d dat: 0x%08x \n", dma_state);
+    	printk("sdrdma irq: %d\n", dma_state);
     }
     
     
@@ -91,7 +143,7 @@ static int sdrdma_probe(struct platform_device *pdev)
     struct device *dev = &pdev->dev;
     int irq_n;
  
-    printk("Device Tree Probing 6\n"); 
+    printk("Device Tree Probing 7\n"); 
     res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
     if (!res) {
       printk(KERN_INFO "could not get platform IRQ resource.\n");
@@ -133,7 +185,7 @@ static int sdrdma_probe(struct platform_device *pdev)
     }
     
     //lp->virtual_base = ioremap_cache(STATE_WORD_OFFSET, (BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
-    lp->virtual_base = ioremap(STATE_WORD_OFFSET, (BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
+    lp->virtual_base = ioremap(SOUND_STATE_WORD_OFFSET, (BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
     if (!lp->virtual_base)
     {
     	printk("Can't remap memory for sdrdma device\n");
@@ -143,6 +195,8 @@ static int sdrdma_probe(struct platform_device *pdev)
     
     lp->test_cnt = 0;
     lp->is_init = 1;
+    global_drv_state_p = lp;
+    sfifo_init(&sound_fifo, (void *)sound_fifo_buf, (BUFFER_SIZE_WORDS * sizeof(uint32_t)), SOUND_FIFO_ITEMS);
 
    return 0;
  
