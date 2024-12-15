@@ -4,6 +4,7 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
+#include <linux/kdev_t.h>
 
 #include <linux/of_address.h>
 #include <linux/of_device.h>
@@ -12,6 +13,8 @@
 #include <linux/fs.h>
 #include <asm/io.h>
 #include <linux/workqueue.h>
+#include <linux/mutex.h>
+#include <linux/device.h>
 
 #include "sfifo.h"
 
@@ -32,10 +35,11 @@ MODULE_DESCRIPTION
 #define CH_COUNT	        8
 #define BURST_SIZE 			(CH_COUNT * 2) //I+Q, size is 4byte words
 #define BUFFER_SIZE_WORDS   (BURST_SIZE * BUFFER_LENGTH)
+#define BUFFER_SIZE_BYTES   (BUFFER_SIZE_WORDS * sizeof(uint32_t))
 
 //#define SOUND_FIFO_LENGTH_WORDS   (1 << 14)
 
-//#define BUFFER_SIZE_BYTES   (BUFFER_SIZE_WORDS * sizeof(uint32_t))
+
 #define SOUND_FIFO_ITEMS    (3)
 
 
@@ -51,18 +55,19 @@ struct sdrdma_local {
     volatile unsigned long *virtual_base;
     uint8_t is_init;
     uint8_t test_cnt;
-	//void __iomem *base_addr;
-	
-	//DECLARE_KFIFO(sound_rx_fifo, uint32_t, SOUND_FIFO_LENGTH_WORDS);
-	
+    dev_t sdrdma_dev;
+    struct class *dev_class;
 };
 
 static struct sdrdma_local *global_drv_state_p = NULL;
 
 static uint32_t sound_fifo_buf[BUFFER_SIZE_WORDS * SOUND_FIFO_ITEMS];
 static sfifo_t sound_fifo;
+//struct mutex sound_fifo_mutex; 
 
+DEFINE_MUTEX(sound_fifo_mutex);
 
+static int init_sys_device(void *lp_p);
 
 //##########################################################################
 
@@ -77,24 +82,24 @@ void workqueue_fn(struct work_struct *work)
 	if (global_drv_state_p == NULL)
 		return;
 	
-	//if (global_drv_state_p->last_dma_buf == 0)
-	//	kfifo_in(&global_drv_state_p->sound_rx_fifo, global_drv_state_p->dma_fast_buf0, BUFFER_SIZE_WORDS);
 	
+	mutex_lock(&sound_fifo_mutex);
 	if (global_drv_state_p->last_dma_buf == 0)
 	{
 		sfifo_put(&sound_fifo, (void *)global_drv_state_p->dma_fast_buf0);
 	}
+	else
+	{
+		sfifo_put(&sound_fifo, (void *)global_drv_state_p->dma_fast_buf1);
+	}
+	mutex_unlock(&sound_fifo_mutex);
 	
 	//TEST
 	if (global_drv_state_p->test_cnt >= 20)
 		return;
 		
-	
-		
 	uint32_t fifo_amount = sound_fifo.amount;
 	printk(KERN_INFO "work idx %d, fifo=%d\n", global_drv_state_p->last_dma_buf, fifo_amount);
-	
-	
 }
 
 
@@ -102,7 +107,6 @@ static irqreturn_t sdrdma_irq(int irq, void *lp_p)
 {
 	struct sdrdma_local *lp = lp_p;
 	uint32_t dma_state;
-	//uint32_t dma_dat;
 	
     if (lp->is_init == 0)
     {
@@ -120,11 +124,9 @@ static irqreturn_t sdrdma_irq(int irq, void *lp_p)
 		ioread32_rep(lp->virtual_base + 1 + BUFFER_SIZE_WORDS, lp->dma_fast_buf1, BUFFER_SIZE_WORDS);
     }
     lp->last_dma_buf = dma_state;
-    	
-	//printk("sdrdma: %d dat: 0x%08x \n", dma_state, dma_dat);
-	schedule_work(&workqueue);
     
-        
+	schedule_work(&workqueue);
+
     if (lp->test_cnt < 20)
     {
     	lp->test_cnt++;
@@ -135,6 +137,41 @@ static irqreturn_t sdrdma_irq(int irq, void *lp_p)
 	return IRQ_HANDLED;
 }
 
+static int init_sys_device(void *lp_p)
+{
+	struct sdrdma_local *lp = lp_p;
+	
+	/*Allocating Major number*/
+	if((alloc_chrdev_region(&lp->sdrdma_dev, 0, 1, "etx_Dev")) <0){
+		printk("Cannot allocate major number for device\n");
+		return -1;
+	}
+	printk("Major = %d Minor = %d \n",MAJOR(lp->sdrdma_dev), MINOR(lp->sdrdma_dev));
+ 
+	/*Creating struct class*/
+	lp->dev_class = class_create(THIS_MODULE, "sdrdma_class");
+	if(IS_ERR(lp->dev_class)){
+		printk("Cannot create the struct class for device\n");
+		goto r_class;
+	}
+ 
+	/*Creating device*/
+	if(IS_ERR(device_create(lp->dev_class, NULL, lp->sdrdma_dev, NULL, "sdrdma_dev")))
+	{
+		printk("Cannot create the device class\n");
+		goto r_device;
+	}
+	printk("Kernel Module Inserted Successfully...\n");
+	return 0;
+ 
+r_device:
+	class_destroy(lp->dev_class);
+r_class:
+	unregister_chrdev_region(lp->sdrdma_dev, 1);
+	return -1;
+}
+
+
 static int sdrdma_probe(struct platform_device *pdev)
 {
     int rval;
@@ -143,7 +180,7 @@ static int sdrdma_probe(struct platform_device *pdev)
     struct device *dev = &pdev->dev;
     int irq_n;
  
-    printk("Device Tree Probing 7\n"); 
+    printk("Device Tree Probing 8\n"); 
     res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
     if (!res) {
       printk(KERN_INFO "could not get platform IRQ resource.\n");
@@ -184,7 +221,6 @@ static int sdrdma_probe(struct platform_device *pdev)
 		goto error1;
     }
     
-    //lp->virtual_base = ioremap_cache(STATE_WORD_OFFSET, (BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
     lp->virtual_base = ioremap(SOUND_STATE_WORD_OFFSET, (BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
     if (!lp->virtual_base)
     {
@@ -193,10 +229,24 @@ static int sdrdma_probe(struct platform_device *pdev)
     }
     printk("Virt Address 0x%08lx\n", *lp->virtual_base);
     
+    
+    /*
+    if((alloc_chrdev_region(&lp->sdrdma_dev, 0, 1, "sdrdma device")) < 0)
+    {
+		printk(KERN_INFO "Cannot allocate major number for device\n");
+ 		goto error2;
+	}
+	printk(KERN_INFO "Major = %d Minor = %d \n",MAJOR(lp->sdrdma_dev), MINOR(lp->sdrdma_dev));
+	*/
+	
+	rval = init_sys_device(lp);
+	if (rval < 0)
+		goto error2;
+    
     lp->test_cnt = 0;
     lp->is_init = 1;
     global_drv_state_p = lp;
-    sfifo_init(&sound_fifo, (void *)sound_fifo_buf, (BUFFER_SIZE_WORDS * sizeof(uint32_t)), SOUND_FIFO_ITEMS);
+    sfifo_init(&sound_fifo, (void *)sound_fifo_buf, BUFFER_SIZE_BYTES, SOUND_FIFO_ITEMS);
 
    return 0;
  
@@ -223,8 +273,12 @@ static int sdrdma_remove(struct platform_device *pdev)
     kfree(lp->dma_fast_buf0);
     kfree(lp->dma_fast_buf1);
     
+    device_destroy(lp->dev_class, lp->sdrdma_dev);
+  	class_destroy(lp->dev_class);
+    unregister_chrdev_region(lp->sdrdma_dev, 1);
+    
 	//iounmap(lp->base_addr);
-	//release_mem_region(lp->mem_start, lp->mem_end - lp->mem_start + 1);
+
 	kfree(lp);
 	dev_set_drvdata(dev, NULL);
 	return 0;
