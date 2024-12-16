@@ -20,6 +20,8 @@
 #include <linux/device.h>
 #include <linux/cdev.h>
 
+#include <linux/random.h>
+
 #include "sfifo.h"
 
 
@@ -64,6 +66,8 @@ static struct sdrdma_local *global_drv_state_p = NULL;
 
 static uint32_t sound_fifo_buf[BUFFER_SIZE_WORDS * SOUND_FIFO_ITEMS];
 static sfifo_t sound_fifo;
+
+static uint32_t sound_tmp_buf[BUFFER_SIZE_WORDS];
 
 
 DEFINE_MUTEX(sound_fifo_mutex);
@@ -132,6 +136,7 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int32_t value = 0;
 	struct rx_read_op tmp_struct;
 	static uint32_t tmp_counter = 0;
+	int i;
 	
 	tmp_counter++;
 	
@@ -163,11 +168,20 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
       		}
       		else
       		{
-      			//sfifo_get(&sound_fifo, (void *)tmp_struct.destination);
-      			if (tmp_counter < 10)
+      		  	if (tmp_counter < 10)
       			{
       				printk(KERN_INFO "fifo get\n");
       			}
+      			//sfifo_get(&sound_fifo, (void *)tmp_struct.destination);
+      			
+      			
+      			for (i = 0; i < BUFFER_SIZE_WORDS; i++)
+      			{
+      				uint16_t rand;
+    				get_random_bytes(&rand, sizeof(rand));
+      				sound_tmp_buf[i] = rand;
+      			}
+
       			tmp_struct.result = RX_READ_OK;
       		}
       		
@@ -179,6 +193,20 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		{
        		pr_err("RX_READ copy to err\n");
      	}
+     	
+     	
+     	if (tmp_struct.result == RX_READ_OK)
+     	{
+     			if (tmp_counter < 10)
+      			{
+      				printk(KERN_INFO "try to copy\n");
+      			}
+     		if( copy_to_user((void *)tmp_struct.destination, &sound_tmp_buf, sizeof(sound_tmp_buf)) )
+			{
+       			pr_err("RX_READ copy to err2\n");
+     		}
+     	}
+     	
     	break;
 	default:
 		pr_info("Default\n");
