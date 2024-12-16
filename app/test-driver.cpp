@@ -22,29 +22,29 @@ int main() {
 
     printf("sysconf(_SC_PAGESIZE)=%ld\n", sysconf(_SC_PAGESIZE));
 
-    int ad8370_fd = open("/dev/zynqsdr", O_RDWR | O_SYNC);
+    int sdrdma_fd = open("/dev/zynqsdr", O_RDWR | O_SYNC);
 
     int int_clk = 1;
-    ioctl(ad8370_fd, CLK_SET, &int_clk);
+    ioctl(sdrdma_fd, CLK_SET, &int_clk);
 
 
     // map config space
     int rc;
     uint64_t signature = 0;
-    rc = ioctl(ad8370_fd, GET_DNA, &signature);
+    rc = ioctl(sdrdma_fd, GET_DNA, &signature);
     printf("GET_DNA error %d\n", rc);
 
     printf("FPGA Bitstream signature: 0x%llx\n", signature);
 
     // start rx
     int decim = 122880000 / 12000 / 256;
-    ioctl(ad8370_fd, RX_START, decim);
+    ioctl(sdrdma_fd, RX_START, decim);
     clock_gettime(CLOCK_REALTIME, &start_spec);
 
     rc = printf("RX_START[%d] error %d\n", decim, rc);
 
     struct rx_param_op param = { 0, 122 };
-    rc = ioctl(ad8370_fd, RX_PARAM, &param);
+    rc = ioctl(sdrdma_fd, RX_PARAM, &param);
     printf("RX_PARAM error %d errno=%d\n", rc, errno);
 
     memset(buf, 0, sizeof(buf));
@@ -53,7 +53,7 @@ int main() {
         struct rx_read_op read_op = { (__u32)buf, sizeof(int32_t) * 2 * 12000 };
         while (true) {
             // printf("In: 0x%x %d\t", read_op.address, read_op.length);
-            rc = ioctl(ad8370_fd, RX_READ, &read_op);
+            rc = ioctl(sdrdma_fd, RX_READ, &read_op);
             if (rc)
                 break;
             // printf("OUT: 0x%x %d -> %d\n", read_op.address, read_op.length, read_op.readed);
@@ -92,7 +92,7 @@ int main() {
     clock_gettime(CLOCK_REALTIME, &start_spec);
 
     wf_param_op wf_param = { 0, 2, 122 };
-    rc = ioctl(ad8370_fd, WF_PARAM, &wf_param);
+    rc = ioctl(sdrdma_fd, WF_PARAM, &wf_param);
     if (rc < 0) {
         printf("WF set param failed.\n");
         return -1;
@@ -102,7 +102,7 @@ int main() {
         struct wf_read_op wf_read_op = { 0, 0, (__u32)buf, sizeof(int32_t) * 8192 };
         while (true) {
             printf("In: 0x%x %d\t", wf_read_op.address, wf_read_op.length);
-            rc = ioctl(ad8370_fd, WF_READ, &wf_read_op);
+            rc = ioctl(sdrdma_fd, WF_READ, &wf_read_op);
 
             if (rc)
                 break;
@@ -137,7 +137,7 @@ int main() {
 
     printf("\nWF: sample rate= %f (should close to 12,000, otherwise there is bug)\n", 8192.0 * 100 / (stop_spec.tv_sec - start_spec.tv_sec + (stop_spec.tv_nsec - start_spec.tv_nsec) * 1e-9));
 
-    close(ad8370_fd);
+    close(sdrdma_fd);
 
     return 0;
 }

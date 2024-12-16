@@ -66,8 +66,8 @@ static void snd_service() {
             i_samps[ch] = rx->in_samps[rx->wr_pos];
         }
 
-        //fpga_read_rx(snd_data, sizeof(s4_t) * 2 * rx_chans * nrx_samps);
-        fpga_read_rx2(snd_data, sizeof(s4_t) * 2 * rx_chans * nrx_samps, nrx_samps);
+        fpga_read_rx(snd_data, sizeof(s4_t) * 2 * rx_chans * nrx_samps);
+        //fpga_read_rx2(snd_data, sizeof(s4_t) * 2 * rx_chans * nrx_samps, nrx_samps);
         
 
         for (int i = 0; i < nrx_samps; i++) {

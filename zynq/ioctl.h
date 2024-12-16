@@ -27,9 +27,9 @@ struct rx_param_op {
 
 // read RX data
 struct rx_read_op {
-    __u32 address; // base address
+    __u32 destination; // base address
     __u32 length;  // length in bytes
-    __u32 readed;
+    __u32 result;
 } __attribute__((packed));
 #define RX_READ _IOWR('Z', 6, struct rx_read_op)
 

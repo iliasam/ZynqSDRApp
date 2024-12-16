@@ -238,7 +238,7 @@ int main(int argc, char* argv[]) {
     if (err) no_wf = false;
     if (no_wf) wf_chans = 0;
 
-    lprintf("firmware: rx_chans=%d wf_chans=%d gps_chans=%d\n", rx_chans, wf_chans, gps_chans);
+    lprintf("firmware: rx_chans=%d wf_chans=%d\n", rx_chans, wf_chans);
 
     assert(rx_chans <= MAX_RX_CHANS);
     assert(wf_chans <= MAX_WF_CHANS);

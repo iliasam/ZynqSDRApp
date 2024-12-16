@@ -1,3 +1,6 @@
+//Part of this code is taken from here: https://embetronicx.com/tutorials/linux/
+//Commands are taken from here: https://github.com/RaspSDR/server/blob/master/zynq/ioctl.h
+
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -15,10 +18,9 @@
 #include <linux/workqueue.h>
 #include <linux/mutex.h>
 #include <linux/device.h>
+#include <linux/cdev.h>
 
 #include "sfifo.h"
-
-//#include <linux/kfifo.h>
 
 
 /* Standard module information, edit as appropriate */
@@ -37,13 +39,10 @@ MODULE_DESCRIPTION
 #define BUFFER_SIZE_WORDS   (BURST_SIZE * BUFFER_LENGTH)
 #define BUFFER_SIZE_BYTES   (BUFFER_SIZE_WORDS * sizeof(uint32_t))
 
-//#define SOUND_FIFO_LENGTH_WORDS   (1 << 14)
+#define SOUND_FIFO_ITEMS    (3) //each one is BUFFER_SIZE_WORDS in size
 
 
-#define SOUND_FIFO_ITEMS    (3)
-
-
-#define SOUND_STATE_WORD_OFFSET	(0x1F400000)//DMA state address = 500MByte
+#define SOUND_STATE_WORD_OFFSET	(0x1F400000)//DMA state address = 500MByte, sound data follow next
 
 
 
@@ -57,19 +56,140 @@ struct sdrdma_local {
     uint8_t test_cnt;
     dev_t sdrdma_dev;
     struct class *dev_class;
+    struct cdev etx_cdev;
+
 };
 
 static struct sdrdma_local *global_drv_state_p = NULL;
 
 static uint32_t sound_fifo_buf[BUFFER_SIZE_WORDS * SOUND_FIFO_ITEMS];
 static sfifo_t sound_fifo;
-//struct mutex sound_fifo_mutex; 
+
 
 DEFINE_MUTEX(sound_fifo_mutex);
 
-static int init_sys_device(void *lp_p);
 
+// read RX data
+struct rx_read_op {
+    uint32_t destination;
+    uint32_t length;// length in bytes
+    uint32_t result;
+} __attribute__((packed));
+#define RX_READ _IOWR('Z', 6, struct rx_read_op)
+
+#define RX_READ_BAD_SIZE	10
+#define RX_READ_NO_DATA		11
+#define RX_READ_OK			20
+
+
+
+static int 		init_sys_device(void *lp_p);
+
+static int      etx_open(struct inode *inode, struct file *file);
+static int      etx_release(struct inode *inode, struct file *file);
+static ssize_t  etx_read(struct file *filp, char __user *buf, size_t len,loff_t * off);
+static ssize_t  etx_write(struct file *filp, const char *buf, size_t len, loff_t * off);
+static long     etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+
+
+static struct file_operations fops =
+{
+	.owner          = THIS_MODULE,
+	.read           = etx_read,
+	.write          = etx_write,
+	.open           = etx_open,
+	.unlocked_ioctl = etx_ioctl,
+	.release        = etx_release,
+};
 //##########################################################################
+
+//Device file operations
+
+
+static int etx_open(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static int etx_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static ssize_t etx_read(struct file *filp, char __user *buf, size_t len, loff_t *off)
+{
+	return 0;
+}
+
+
+static ssize_t etx_write(struct file *filp, const char __user *buf, size_t len, loff_t *off)
+{
+	return len;
+}
+
+static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int32_t value = 0;
+	struct rx_read_op tmp_struct;
+	static uint32_t tmp_counter = 0;
+	
+	tmp_counter++;
+	
+	
+	switch(cmd) {
+	case RX_READ:
+		// void * to, const void __user * from, unsigned long n
+		if( copy_from_user(&tmp_struct ,(struct rx_read_op *) arg, sizeof(struct rx_read_op)) )
+      	{
+     		pr_err("RX_READ copy from err\n");
+      	}
+      	
+      	if (tmp_counter < 10)
+      	{
+      		printk(KERN_INFO "rx read dest=%d length=%d\n", tmp_struct.destination, tmp_struct.length);
+      	}
+      	
+      	if (tmp_struct.length != BUFFER_SIZE_BYTES)
+      	{
+      		tmp_struct.result = RX_READ_BAD_SIZE;
+      	}
+      	else
+      	{
+      		mutex_lock(&sound_fifo_mutex);
+
+      		if (sound_fifo.amount == 0)
+      		{
+      			tmp_struct.result = RX_READ_NO_DATA;
+      		}
+      		else
+      		{
+      			//sfifo_get(&sound_fifo, (void *)tmp_struct.destination);
+      			if (tmp_counter < 10)
+      			{
+      				printk(KERN_INFO "fifo get\n");
+      			}
+      			tmp_struct.result = RX_READ_OK;
+      		}
+      		
+      		mutex_unlock(&sound_fifo_mutex);
+      	}
+      	
+		//void __user * to, const void * from, unsigned long n
+		if( copy_to_user((struct rx_read_op *)arg, &tmp_struct, sizeof(struct rx_read_op)) )
+		{
+       		pr_err("RX_READ copy to err\n");
+     	}
+    	break;
+	default:
+		pr_info("Default\n");
+		break;
+	}
+	return 0;
+}
+
+
+//*********************************************************************
+
 
 void workqueue_fn(struct work_struct *work); 
  
@@ -147,6 +267,14 @@ static int init_sys_device(void *lp_p)
 		return -1;
 	}
 	printk("Major = %d Minor = %d \n",MAJOR(lp->sdrdma_dev), MINOR(lp->sdrdma_dev));
+	
+	cdev_init(&lp->etx_cdev, &fops);
+	
+	/*Adding character device to the system*/
+    if((cdev_add(&lp->etx_cdev, lp->sdrdma_dev, 1)) < 0){
+		pr_err("Cannot add the device to the system\n");
+        goto r_class;
+    }
  
 	/*Creating struct class*/
 	lp->dev_class = class_create(THIS_MODULE, "sdrdma_class");
@@ -156,12 +284,12 @@ static int init_sys_device(void *lp_p)
 	}
  
 	/*Creating device*/
-	if(IS_ERR(device_create(lp->dev_class, NULL, lp->sdrdma_dev, NULL, "sdrdma_dev")))
+	if(IS_ERR(device_create(lp->dev_class, NULL, lp->sdrdma_dev, NULL, DRIVER_NAME)))
 	{
 		printk("Cannot create the device class\n");
 		goto r_device;
 	}
-	printk("Kernel Module Inserted Successfully...\n");
+	printk("SDRDMA - Kernel Device created successfully.\n");
 	return 0;
  
 r_device:
@@ -228,16 +356,6 @@ static int sdrdma_probe(struct platform_device *pdev)
     	goto error2;
     }
     printk("Virt Address 0x%08lx\n", *lp->virtual_base);
-    
-    
-    /*
-    if((alloc_chrdev_region(&lp->sdrdma_dev, 0, 1, "sdrdma device")) < 0)
-    {
-		printk(KERN_INFO "Cannot allocate major number for device\n");
- 		goto error2;
-	}
-	printk(KERN_INFO "Major = %d Minor = %d \n",MAJOR(lp->sdrdma_dev), MINOR(lp->sdrdma_dev));
-	*/
 	
 	rval = init_sys_device(lp);
 	if (rval < 0)
@@ -275,6 +393,7 @@ static int sdrdma_remove(struct platform_device *pdev)
     
     device_destroy(lp->dev_class, lp->sdrdma_dev);
   	class_destroy(lp->dev_class);
+  	cdev_del(&lp->etx_cdev);
     unregister_chrdev_region(lp->sdrdma_dev, 1);
     
 	//iounmap(lp->base_addr);
