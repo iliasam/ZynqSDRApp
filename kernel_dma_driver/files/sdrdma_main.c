@@ -20,8 +20,6 @@
 #include <linux/device.h>
 #include <linux/cdev.h>
 
-#include <linux/random.h>
-
 #include "sfifo.h"
 
 
@@ -172,16 +170,7 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
       			{
       				printk(KERN_INFO "fifo get\n");
       			}
-      			//sfifo_get(&sound_fifo, (void *)tmp_struct.destination);
-      			
-      			
-      			for (i = 0; i < BUFFER_SIZE_WORDS; i++)
-      			{
-      				uint16_t rand;
-    				get_random_bytes(&rand, sizeof(rand));
-      				sound_tmp_buf[i] = rand;
-      			}
-
+      			sfifo_get(&sound_fifo, (void *)sound_tmp_buf);
       			tmp_struct.result = RX_READ_OK;
       		}
       		
@@ -201,7 +190,9 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
       			{
       				printk(KERN_INFO "try to copy\n");
       			}
-     		if( copy_to_user((void *)tmp_struct.destination, &sound_tmp_buf, sizeof(sound_tmp_buf)) )
+      			
+      		//void __user * to, const void * from, unsigned long n
+     		if( copy_to_user((void *)tmp_struct.destination, sound_tmp_buf, sizeof(sound_tmp_buf)) )
 			{
        			pr_err("RX_READ copy to err2\n");
      		}

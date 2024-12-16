@@ -53,7 +53,7 @@ struct iq2_t {
     s2_t i, q;
 } __attribute__((packed));
 
-s4_t  rnd_snd_data[1024*16];
+
 iq2_t  rnd_wf_data[1024*8];
 
 
@@ -98,11 +98,6 @@ void peri_init() {
 
     wf_channels = (fpga_signature() >> 8) & 0x0f;
     sem_init(&wf_sem, 0, wf_channels);
-
-    for (int i = 0; i < 1024*16; i++)
-    {
-        rnd_snd_data[i] = (s4_t)(random() % 1024) - (s4_t)512;
-    }
 
     for (int i = 0; i < 1024*8; i++)
     {
@@ -236,6 +231,7 @@ void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
     printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
+/*
 void fpga_read_rx2(void* buf, uint32_t size, uint32_t nsamples)
 {
     int total_size_bytes = size;
@@ -259,6 +255,7 @@ void fpga_read_rx2(void* buf, uint32_t size, uint32_t nsamples)
     //memset(buf, 0, size);
     TaskSleepUsec(nsamples * 83); //12 khz
 }
+*/
 
 void fpga_read_rx(void* buf, uint32_t size) {
     memset(buf, 0, size);
@@ -275,14 +272,12 @@ void fpga_read_rx(void* buf, uint32_t size) {
         if (rc)
             break;
 
-        if (test_cnt < 20)
-            printf("OUT: 0x%x %d -> %d\n", read_op.destination, read_op.length, read_op.result);
+        //if (test_cnt < 20)
+        //    printf("OUT: 0x%x len=%d res= %d \n", read_op.destination, read_op.length, read_op.result);
 
         //if (read_op.readed != read_op.length)
         if (read_op.result != RX_READ_OK)
         {
-            //read_op.address += read_op.readed;
-            //read_op.length -= read_op.readed;
             TaskSleepMsec(10);
         }
         else {
