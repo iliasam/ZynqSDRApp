@@ -147,11 +147,6 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
      		pr_err("RX_READ copy from err\n");
       	}
       	
-      	if (tmp_counter < 10)
-      	{
-      		printk(KERN_INFO "rx read dest=%d length=%d\n", tmp_struct.destination, tmp_struct.length);
-      	}
-      	
       	if (tmp_struct.length != BUFFER_SIZE_BYTES)
       	{
       		tmp_struct.result = RX_READ_BAD_SIZE;
@@ -186,10 +181,14 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
      	
      	if (tmp_struct.result == RX_READ_OK)
      	{
-     			if (tmp_counter < 10)
-      			{
-      				printk(KERN_INFO "try to copy\n");
-      			}
+     		if (tmp_counter < 10)
+      		{
+      			printk(KERN_INFO "try to copy\n");
+      			//for (i = 0; i < 10; i++)
+      			///{
+      			//	pr_info("I=%d Q=%d\n", sound_tmp_buf[i*2], sound_tmp_buf[i*2 + 1]);
+      			//}
+      		}
       			
       		//void __user * to, const void * from, unsigned long n
      		if( copy_to_user((void *)tmp_struct.destination, sound_tmp_buf, sizeof(sound_tmp_buf)) )
@@ -256,11 +255,11 @@ static irqreturn_t sdrdma_irq(int irq, void *lp_p)
     	
     if (dma_state == 0)
 	{
-   		ioread32_rep(lp->virtual_base + 1, lp->dma_fast_buf0, BUFFER_SIZE_WORDS);
+   		memcpy_fromio(lp->dma_fast_buf0, lp->virtual_base + 1, BUFFER_SIZE_BYTES);
 	}
 	else
   	{
-		ioread32_rep(lp->virtual_base + 1 + BUFFER_SIZE_WORDS, lp->dma_fast_buf1, BUFFER_SIZE_WORDS);
+		memcpy_fromio(lp->dma_fast_buf1, lp->virtual_base + 1 + BUFFER_SIZE_WORDS, BUFFER_SIZE_BYTES);
     }
     lp->last_dma_buf = dma_state;
     

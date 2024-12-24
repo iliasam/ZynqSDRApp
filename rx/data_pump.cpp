@@ -70,17 +70,19 @@ static void snd_service() {
         //fpga_read_rx2(snd_data, sizeof(s4_t) * 2 * rx_chans * nrx_samps, nrx_samps);
         
 
-        for (int i = 0; i < nrx_samps; i++) {
-            s4_t* data = &snd_data[i * 2 * rx_chans];
-            for (int ch = 0; ch < rx_chans; ch++) {
-                s4_t i, q;
-                i = data[ch * 2];
-                q = data[ch * 2 + 1];
+        for (int s_idx = 0; s_idx < nrx_samps; s_idx++) 
+        {
+            s4_t* data = &snd_data[s_idx * 2 * rx_chans];
+            for (int ch = 0; ch < rx_chans; ch++) 
+            {
+                s4_t s_i, s_q;
+                s_i = data[ch * 2];
+                s_q = data[ch * 2 + 1];
 
                 // NB: I/Q reversed to get correct sideband polarity; fixme: why?
                 // [probably because mixer NCO polarity is wrong, i.e. cos/sin should really be cos/-sin]
-                i_samps[ch]->re = i * rescale + DC_offset_I;
-                i_samps[ch]->im = q * rescale + DC_offset_Q;
+                i_samps[ch]->im = s_i * rescale + DC_offset_I;
+                i_samps[ch]->re = s_q * rescale + DC_offset_Q;
                 i_samps[ch]++;
             }
 

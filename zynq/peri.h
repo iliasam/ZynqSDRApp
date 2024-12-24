@@ -15,6 +15,7 @@
 #define GPIO_PGA    (1 << 7)
 #define GPIO_LED    (1 << 8)
 
+//Width of the acumulator in bits
 #define RX_SOUND_DDS_RESOLUTION     32 //bits
 
 
