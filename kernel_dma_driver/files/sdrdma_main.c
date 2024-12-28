@@ -275,6 +275,18 @@ static irqreturn_t sdrdma_irq(int irq, void *lp_p)
 	return IRQ_HANDLED;
 }
 
+static char *devnode(struct device *dev, umode_t *mode)
+{
+	if (!mode)
+		return NULL;
+	if (dev->devt == global_drv_state_p->sdrdma_dev)
+	{
+		printk("Change dev mode to 0666\n");
+		*mode = 0666;
+	}
+	return NULL;
+}
+
 static int init_sys_device(void *lp_p)
 {
 	struct sdrdma_local *lp = lp_p;
@@ -300,6 +312,7 @@ static int init_sys_device(void *lp_p)
 		printk("Cannot create the struct class for device\n");
 		goto r_class;
 	}
+	lp->dev_class->devnode = devnode;
  
 	/*Creating device*/
 	if(IS_ERR(device_create(lp->dev_class, NULL, lp->sdrdma_dev, NULL, DRIVER_NAME)))
@@ -338,6 +351,7 @@ static int sdrdma_probe(struct platform_device *pdev)
 		printk("Can't not allocate memory for sdrdma device\n");
 		return -ENOMEM;
     }
+    global_drv_state_p = lp;
     dev_set_drvdata(dev, lp);
  
     // save the returned IRQ
@@ -381,7 +395,7 @@ static int sdrdma_probe(struct platform_device *pdev)
     
     lp->test_cnt = 0;
     lp->is_init = 1;
-    global_drv_state_p = lp;
+    
     sfifo_init(&sound_fifo, (void *)sound_fifo_buf, BUFFER_SIZE_BYTES, SOUND_FIFO_ITEMS);
 
    return 0;

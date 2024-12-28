@@ -79,10 +79,9 @@ static void snd_service() {
                 s_i = data[ch * 2];
                 s_q = data[ch * 2 + 1];
 
-                // NB: I/Q reversed to get correct sideband polarity; fixme: why?
-                // [probably because mixer NCO polarity is wrong, i.e. cos/sin should really be cos/-sin]
-                i_samps[ch]->im = s_i * rescale + DC_offset_I;
-                i_samps[ch]->re = s_q * rescale + DC_offset_Q;
+                // cos/-sin
+                i_samps[ch]->re = s_i * rescale + DC_offset_I;
+                i_samps[ch]->im = s_q * rescale + DC_offset_Q;
                 i_samps[ch]++;
             }
 

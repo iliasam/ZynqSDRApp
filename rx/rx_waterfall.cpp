@@ -290,7 +290,7 @@ void c2s_waterfall(void* param) {
             adc_clock_corrected = conn->adc_clock_corrected;
             off_freq = start * HZperStart;
             off_freq_inv = ((float)MAX_START(zoom) - start) * HZperStart;
-            i_offset = (u64_t)(s64_t)((spectral_inversion ? off_freq_inv : off_freq) / conn->adc_clock_corrected * pow(2, 48));
+            i_offset = (u64_t)(s64_t)((spectral_inversion ? off_freq_inv : off_freq) / conn->adc_clock_corrected * pow(2, RX_WF_DDS_RESOLUTION));
             if (wf->isWF) {
                 wf->i_offset = i_offset;
 
@@ -375,7 +375,6 @@ void c2s_waterfall(void* param) {
                         zoom = _zoom;
 
 #define CIC1_DECIM 0x0001
-#define CIC2_DECIM 0x0100
                         u2_t decim, r1, r2;
 
                         // NB: because we only use half of the FFT with CIC can zoom one level less
@@ -441,7 +440,7 @@ void c2s_waterfall(void* param) {
                     off_freq = start * HZperStart;
                     off_freq_inv = ((float)maxstart - start) * HZperStart;
 
-                    i_offset = (u64_t)(s64_t)((spectral_inversion ? off_freq_inv : off_freq) / conn->adc_clock_corrected * pow(2, 48));
+                    i_offset = (u64_t)(s64_t)((spectral_inversion ? off_freq_inv : off_freq) / conn->adc_clock_corrected * pow(2, RX_WF_DDS_RESOLUTION));
 
 #ifdef WF_INFO
                     if (!bg) cprintf(conn, "WF z%d OFFSET %.3f kHz i_offset 0x%012llx\n",
@@ -852,6 +851,7 @@ static void cleanup_wf(void* arg) {
     }
 }
 
+// Called periodically
 static void sample_wf(int rx_chan) {
     wf_inst_t* wf = &WF_SHMEM->wf_inst[rx_chan];
     int k;
@@ -873,10 +873,12 @@ static void sample_wf(int rx_chan) {
     int desired = 1000 / wf_fps[wf->speed];
 
     // desired frame rate greater than what full sampling can deliver, so start overlapped sampling
-    if (wf->check_overlapped_sampling && !kiwi.wf_share) {
+    if (wf->check_overlapped_sampling && !kiwi.wf_share) 
+    {
         wf->check_overlapped_sampling = false;
 
-        if (wf->samp_wait_us / 1000 >= desired / 2) {
+        if (wf->samp_wait_us / 1000 >= desired / 2) 
+        {
             wf->overlapped_sampling = true;
 
 #ifdef WF_INFO
@@ -886,7 +888,8 @@ static void sample_wf(int rx_chan) {
 
             fpga_reset_wf(rx_chan, true);
         }
-        else {
+        else 
+        {
             wf->overlapped_sampling = false;
 
 #ifdef WF_INFO

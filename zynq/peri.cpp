@@ -24,7 +24,11 @@
 #include "ioctl.h"
 #include <linux/spi/spidev.h>
 
+#define MAX_WF_CHANNELS         2
+
 #define SPI_CMD_SET_RX_FREQ     1
+#define SPI_CMD_SET_WF_FREQ     2
+#define SPI_CMD_SET_WF_DECIM    3
 
 #define SDRDMA_NAME             "/dev/sdrdma"
 
@@ -48,6 +52,14 @@ static int sdr_spi_fd;
 static sem_t wf_sem;
 static std::atomic<int> wf_using[4];
 static int wf_channels;
+
+typedef struct
+{
+    uint64_t freq_code;
+    int decim_code;
+} waterfall_state_t;
+
+waterfall_state_t wf_buf[MAX_WF_CHANNELS];
 
 struct iq2_t {
     s2_t i, q;
@@ -117,7 +129,7 @@ void rf_attn_set(float f) {
     printf("Set PE4312 with %d/0x%x\n", gain, gain);
     //if (ioctl(sdrdma_fd, AD8370_SET, gain) < 0) {
     //    printf("AD8370 set RF failed: %s\n", strerror(errno));
-   // }
+    // }
 
     return;
 }
@@ -220,7 +232,6 @@ void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
 
     //printf("SPI1: %lu\n", (uint32_t)i_phase);
 
-
     payload_tx[2] = (uint8_t)(((uint32_t)i_phase & 0xFF000000) >> 24);
     payload_tx[3] = (uint8_t)(((uint32_t)i_phase & 0x00FF0000) >> 16);
     payload_tx[4] = (uint8_t)(((uint32_t)i_phase & 0x0000FF00) >> 8);
@@ -230,32 +241,6 @@ void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
 
     printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
-
-/*
-void fpga_read_rx2(void* buf, uint32_t size, uint32_t nsamples)
-{
-    int total_size_bytes = size;
-    int single_size_bytes = 0;
-
-    void *desp_p = buf;
-
-    do
-    {
-        if (total_size_bytes > sizeof(rnd_snd_data))
-            single_size_bytes = sizeof(rnd_snd_data);
-        else
-            single_size_bytes = total_size_bytes;
-
-        memcpy(desp_p, rnd_snd_data, single_size_bytes);
-        desp_p += single_size_bytes;
-
-        total_size_bytes -= single_size_bytes;
-    } while (total_size_bytes > 0);
-
-    //memset(buf, 0, size);
-    TaskSleepUsec(nsamples * 83); //12 khz
-}
-*/
 
 void fpga_read_rx(void* buf, uint32_t size) {
     memset(buf, 0, size);
@@ -275,7 +260,6 @@ void fpga_read_rx(void* buf, uint32_t size) {
         //if (test_cnt < 20)
         //    printf("OUT: 0x%x len=%d res= %d \n", read_op.destination, read_op.length, read_op.result);
 
-        //if (read_op.readed != read_op.length)
         if (read_op.result != RX_READ_OK)
         {
             TaskSleepMsec(10);
@@ -375,6 +359,12 @@ void fpga_setadclvl(uint32_t val) {
     /// TODO
 }
 
+//WATERFALL *********************************************
+
+/// @brief Start WF channel read
+/// @param wf_chan 
+/// @param cont - continues
+/// @return 
 int fpga_reset_wf(int wf_chan, bool cont) {
     int rc = 0;
     int data = wf_chan;
@@ -392,50 +382,68 @@ int fpga_reset_wf(int wf_chan, bool cont) {
     return rc;
 }
 
-int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase) {
+void fpga_set_wf_freq(int wf_chan, uint64_t i_phase) 
+{
+    uint8_t payload_tx[6];
+    uint8_t payload_rx[6];
+
+    payload_tx[0] = SPI_CMD_SET_WF_FREQ;
+    payload_tx[1] = (uint8_t)wf_chan + 1;
+
+    payload_tx[2] = (uint8_t)(((uint32_t)i_phase & 0xFF000000) >> 24);
+    payload_tx[3] = (uint8_t)(((uint32_t)i_phase & 0x00FF0000) >> 16);
+    payload_tx[4] = (uint8_t)(((uint32_t)i_phase & 0x0000FF00) >> 8);
+    payload_tx[5] = (uint8_t)(((uint32_t)i_phase & 0x000000FF) >> 0);
+
+    spi_transfer(sdr_spi_fd, payload_tx, payload_rx, sizeof(payload_tx));
+
+    printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
+}
+
+void fpga_set_wf_cic_decim(int wf_chan, int decimation) 
+{
+    uint8_t payload_tx[6];
+    uint8_t payload_rx[6];
+
+    payload_tx[0] = SPI_CMD_SET_WF_DECIM;
+    payload_tx[1] = (uint8_t)wf_chan + 1;
+    payload_tx[2] = 0;
+    payload_tx[3] = 0;
+    payload_tx[4] = (uint8_t)(((uint32_t)decimation & 0x0000FF00) >> 8);
+    payload_tx[5] = (uint8_t)(((uint32_t)decimation & 0x000000FF) >> 0);
+
+    spi_transfer(sdr_spi_fd, payload_tx, payload_rx, sizeof(payload_tx));
+
+    printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
+}
+
+int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase) 
+{
     int rc = 0;
-    //wf_param_op param = { (__u16)wf_chan, (__u16)decimate, freq };
-    //rc = ioctl(sdrdma_fd, WF_PARAM, &param);
-    //if (rc)
-    //    lprintf("WF Parameter failed");
+
+    if (wf_chan >= MAX_WF_CHANNELS)
+        return 0;
+
+    waterfall_state_t *wf_state = &wf_buf[wf_chan];
+
+    if (wf_state->freq_code != i_phase)
+    {
+        wf_state->freq_code = i_phase;
+
+        float freq = (float)i_phase / (float)pow(2, RX_WF_DDS_RESOLUTION) * (float)40.0f;//mhz
+        printf("WF ch=%d changed dec=%d  FREQ=%f\n", wf_chan, decimate, freq);
+        fpga_set_wf_freq(wf_chan, i_phase);
+    }
+
+    if (wf_state->decim_code != decimate)
+    {
+        wf_state->decim_code = decimate;
+        float freq = (float)(wf_state->freq_code) / (float)pow(2, RX_WF_DDS_RESOLUTION) * (float)40.0f;//mhz
+        printf("WF ch=%d changed DEC=%d  freq=%f\n", wf_chan, decimate, freq);
+        fpga_set_wf_cic_decim(wf_chan, decimate);
+    }
 
     return rc;
-}
-
-int fpga_get_wf(int rx_chan) {
-    int ret = -1;
-
-    while (ret) {
-        ret = sem_wait(&wf_sem);
-    }
-
-    for (int i = 0; i < wf_channels; i++) {
-        int empty = 0;
-        bool exchanged = wf_using[i].compare_exchange_strong(empty, rx_chan + 10);
-
-        if (exchanged) {
-            return i;
-        }
-    }
-
-    panic("Run out of wf channels");
-
-    return -1;
-}
-
-void fpga_free_wf(int wf_chan, int rx_chan) {
-    if (rx_chan > 0) {
-        rx_chan += 10;
-
-        bool exchanged = wf_using[wf_chan].compare_exchange_strong(rx_chan, 0);
-        assert(exchanged);
-    }
-    else {
-        wf_using[wf_chan].store(0);
-    }
-
-    int ret = sem_post(&wf_sem);
-    if (ret) panic("sem_post failed");
 }
 
 void fpga_read_wf2(int wf_chan, void* buf, uint32_t size, uint32_t nsamples)
@@ -474,4 +482,40 @@ void fpga_read_wf(int wf_chan, void* buf, uint32_t size)
         lprintf("Read WF failed");
     */
 
+}
+
+int fpga_get_wf(int rx_chan) {
+    int ret = -1;
+
+    while (ret) {
+        ret = sem_wait(&wf_sem);
+    }
+
+    for (int i = 0; i < wf_channels; i++) {
+        int empty = 0;
+        bool exchanged = wf_using[i].compare_exchange_strong(empty, rx_chan + 10);
+
+        if (exchanged) {
+            return i;
+        }
+    }
+
+    panic("Run out of wf channels");
+
+    return -1;
+}
+
+void fpga_free_wf(int wf_chan, int rx_chan) {
+    if (rx_chan > 0) {
+        rx_chan += 10;
+
+        bool exchanged = wf_using[wf_chan].compare_exchange_strong(rx_chan, 0);
+        assert(exchanged);
+    }
+    else {
+        wf_using[wf_chan].store(0);
+    }
+
+    int ret = sem_post(&wf_sem);
+    if (ret) panic("sem_post failed");
 }

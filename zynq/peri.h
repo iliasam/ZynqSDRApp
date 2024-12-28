@@ -18,6 +18,9 @@
 //Width of the acumulator in bits
 #define RX_SOUND_DDS_RESOLUTION     32 //bits
 
+//Width of the acumulator in bits - waterfall
+#define RX_WF_DDS_RESOLUTION        32 //bits
+
 
 void peri_init();
 void peri_free();
