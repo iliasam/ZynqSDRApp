@@ -20,6 +20,7 @@
 #include <linux/device.h>
 #include <linux/cdev.h>
 
+
 #include "sfifo.h"
 
 
@@ -34,25 +35,35 @@ MODULE_DESCRIPTION
 #define DRIVER_NAME_WF "sdrdma"
 #define DIVER_DTS_DEVICE "openzynqsdr"
 
-#define BUFFER_LENGTH		200 //bursts
-#define CH_COUNT	        8
-#define BURST_SIZE 			(CH_COUNT * 2) //I+Q, size is 4byte words
-#define BUFFER_SIZE_WORDS   (BURST_SIZE * BUFFER_LENGTH)
-#define BUFFER_SIZE_BYTES   (BUFFER_SIZE_WORDS * sizeof(uint32_t))
+#define SOUND_BUFFER_LENGTH		200 //bursts
+#define SOUND_CH_COUNT	        8
+#define SOUND_BURST_SIZE 	    (SOUND_CH_COUNT * 2) //I+Q, size is 4byte words
+#define SOUND_BUFFER_SIZE_WORDS (SOUND_BURST_SIZE * SOUND_BUFFER_LENGTH)
+#define SOUND_BUFFER_SIZE_BYTES (SOUND_BUFFER_SIZE_WORDS * sizeof(uint32_t))
 
-#define SOUND_FIFO_ITEMS    (3) //each one is BUFFER_SIZE_WORDS in size
+#define SOUND_FIFO_ITEMS        (3) //each one is SOUND_BUFFER_SIZE_WORDS in size
+
+//Waterfall
+#define WF_BUFFER_SIZE_WORDS    (8192) //I+Q, size is 4byte words
+#define WF_BUFFER_SIZE_BYTES 	(WF_BUFFER_SIZE_WORDS * sizeof(uint32_t))
 
 
 #define SOUND_STATE_WORD_OFFSET	(0x1F400000)//DMA state address = 500MByte, sound data follow next
+#define WF0_STATE_WORD_OFFSET	(0x1F410000)
 
 
+#define RX_READ_BAD_SIZE	10
+#define RX_READ_NO_DATA		11
+#define RX_READ_OK			20
 
 struct sdrdma_local {
-	int irq;
-	uint8_t last_dma_buf;//last filled
-    uint32_t *dma_fast_buf0;
-    uint32_t *dma_fast_buf1;
-    volatile unsigned long *virtual_base;
+	int sound_irq_n;
+	uint8_t last_sound_dma_buf;//last filled
+    uint32_t *sound_dma_fast_buf0;
+    uint32_t *sound_dma_fast_buf1;
+    
+    uint32_t *wf0_dma_fast_buf0;
+    volatile unsigned long *sound_virtual_base;
     uint8_t is_init;
     uint8_t test_cnt;
     uint8_t test_cnt_wf0;
@@ -61,14 +72,6 @@ struct sdrdma_local {
     struct cdev etx_cdev;
 
 };
-
-static struct sdrdma_local *global_drv_state_p = NULL;
-
-static uint32_t sound_fifo_buf[BUFFER_SIZE_WORDS * SOUND_FIFO_ITEMS];
-static sfifo_t sound_fifo;
-
-static uint32_t sound_tmp_buf[BUFFER_SIZE_WORDS];
-
 
 DEFINE_MUTEX(sound_fifo_mutex);
 
@@ -81,10 +84,22 @@ struct rx_read_op {
 } __attribute__((packed));
 #define RX_READ _IOWR('Z', 6, struct rx_read_op)
 
-#define RX_READ_BAD_SIZE	10
-#define RX_READ_NO_DATA		11
-#define RX_READ_OK			20
+// read wf data oneshot or continues
+struct wf_read_op {
+    uint16_t channel;
+    uint32_t destination;
+    uint32_t length;  // length in bytes
+    uint32_t result;
+} __attribute__((packed));
+#define WF_READ _IOWR('Z', 12, struct wf_read_op)
 
+static struct sdrdma_local *global_drv_state_p = NULL;
+
+static uint32_t sound_fifo_buf[SOUND_BUFFER_SIZE_WORDS * SOUND_FIFO_ITEMS];
+static sfifo_t sound_fifo;
+
+static uint32_t sound_tmp_buf[SOUND_BUFFER_SIZE_WORDS];
+static uint32_t wf_tmp_buf[WF_BUFFER_SIZE_WORDS];
 
 
 static int 		init_sys_device(void *lp_p);
@@ -94,6 +109,9 @@ static int      etx_release(struct inode *inode, struct file *file);
 static ssize_t  etx_read(struct file *filp, char __user *buf, size_t len,loff_t * off);
 static ssize_t  etx_write(struct file *filp, const char *buf, size_t len, loff_t * off);
 static long     etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+
+const int16_t tmp_sin_data[16] = {0,4,7,9,10,9,7,4,0,-4,-7,-9,-10,-9,-7,-4};
+const int16_t tmp_cos_data[16] = {10,9,7,4,0,-4,-7,-9,-10,-9,-7,-4,0,4,7,9};
 
 
 static struct file_operations fops =
@@ -134,24 +152,26 @@ static ssize_t etx_write(struct file *filp, const char __user *buf, size_t len, 
 static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int32_t value = 0;
-	struct rx_read_op tmp_struct;
+	struct rx_read_op tmp_sound_struct;
+	struct wf_read_op tmp_wf_struct;
 	static uint32_t tmp_counter = 0;
 	int i;
 	
 	tmp_counter++;
 	
 	
-	switch(cmd) {
+	switch(cmd) 
+	{
 	case RX_READ:
 		// void * to, const void __user * from, unsigned long n
-		if( copy_from_user(&tmp_struct ,(struct rx_read_op *) arg, sizeof(struct rx_read_op)) )
+		if( copy_from_user(&tmp_sound_struct ,(struct rx_read_op *) arg, sizeof(struct rx_read_op)) )
       	{
      		pr_err("RX_READ copy from err\n");
       	}
       	
-      	if (tmp_struct.length != BUFFER_SIZE_BYTES)
+      	if (tmp_sound_struct.length != SOUND_BUFFER_SIZE_BYTES)
       	{
-      		tmp_struct.result = RX_READ_BAD_SIZE;
+      		tmp_sound_struct.result = RX_READ_BAD_SIZE;
       	}
       	else
       	{
@@ -159,7 +179,7 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
       		if (sound_fifo.amount == 0)
       		{
-      			tmp_struct.result = RX_READ_NO_DATA;
+      			tmp_sound_struct.result = RX_READ_NO_DATA;
       		}
       		else
       		{
@@ -168,20 +188,20 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
       				printk(KERN_INFO "fifo get\n");
       			}
       			sfifo_get(&sound_fifo, (void *)sound_tmp_buf);
-      			tmp_struct.result = RX_READ_OK;
+      			tmp_sound_struct.result = RX_READ_OK;
       		}
       		
       		mutex_unlock(&sound_fifo_mutex);
       	}
       	
 		//void __user * to, const void * from, unsigned long n
-		if( copy_to_user((struct rx_read_op *)arg, &tmp_struct, sizeof(struct rx_read_op)) )
+		if( copy_to_user((struct rx_read_op *)arg, &tmp_sound_struct, sizeof(struct rx_read_op)) )
 		{
        		pr_err("RX_READ copy to err\n");
      	}
      	
      	
-     	if (tmp_struct.result == RX_READ_OK)
+     	if (tmp_sound_struct.result == RX_READ_OK)
      	{
      		if (tmp_counter < 10)
       		{
@@ -193,13 +213,80 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
       		}
       			
       		//void __user * to, const void * from, unsigned long n
-     		if( copy_to_user((void *)tmp_struct.destination, sound_tmp_buf, sizeof(sound_tmp_buf)) )
+     		if( copy_to_user((void *)tmp_sound_struct.destination, sound_tmp_buf, sizeof(sound_tmp_buf)) )
 			{
        			pr_err("RX_READ copy to err2\n");
      		}
      	}
      	
-    	break;
+	break;
+    	
+    	
+    	
+	case WF_READ:
+		// void * to, const void __user * from, unsigned long n
+		if( copy_from_user(&tmp_wf_struct, (struct wf_read_op *) arg, sizeof(struct wf_read_op)) )
+      	{
+     		pr_err("RX_READ copy from err\n");
+      	}
+      	
+      	if (tmp_wf_struct.length != WF_BUFFER_SIZE_BYTES)
+      	{
+      		tmp_wf_struct.result = RX_READ_BAD_SIZE;
+      	}
+      	else
+      	{
+      		/*
+      		mutex_lock(&sound_fifo_mutex);
+
+      		if (sound_fifo.amount == 0)
+      		{
+      			tmp_wf_struct.result = RX_READ_NO_DATA;
+      		}
+      		else
+      		{
+      		  	if (tmp_counter < 10)
+      			{
+      				printk(KERN_INFO "fifo get\n");
+      			}
+      			sfifo_get(&sound_fifo, (void *)wf_tmp_buf);
+      			tmp_wf_struct.result = RX_READ_OK;
+      		}
+      		
+      		mutex_unlock(&sound_fifo_mutex);
+      		*/
+      		memcpy((void *)wf_tmp_buf, global_drv_state_p->wf0_dma_fast_buf0, WF_BUFFER_SIZE_BYTES);
+      		tmp_wf_struct.result = RX_READ_OK;
+      	}
+      	
+		//void __user * to, const void * from, unsigned long n
+		if( copy_to_user((struct wf_read_op *)arg, &tmp_wf_struct, sizeof(struct wf_read_op)) )
+		{
+       		pr_err("WF RX_READ copy to err\n");
+     	}
+     	
+     	
+     	if (tmp_wf_struct.result == RX_READ_OK)
+     	{
+     		if (tmp_counter < 10)
+      		{
+      			printk(KERN_INFO "try to copy WF\n");
+      			//for (i = 0; i < 10; i++)
+      			///{
+      			//	pr_info("I=%d Q=%d\n", sound_tmp_buf[i*2], sound_tmp_buf[i*2 + 1]);
+      			//}
+      		}
+      			
+      		//void __user * to, const void * from, unsigned long n
+     		if( copy_to_user((void *)tmp_wf_struct.destination, wf_tmp_buf, sizeof(wf_tmp_buf)) )
+			{
+       			pr_err("WF RX_READ copy to err2\n");
+     		}
+     	}
+     	
+	break;
+    	
+    	
 	default:
 		pr_info("Default\n");
 		break;
@@ -211,26 +298,26 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 //*********************************************************************
 
 
-void workqueue_fn(struct work_struct *work); 
+void sound_workqueue_fn(struct work_struct *work); 
  
 /*Creating work by Static Method */
-DECLARE_WORK(workqueue, workqueue_fn);
+DECLARE_WORK(workqueue, sound_workqueue_fn);
 
 /*Workqueue Function*/
-void workqueue_fn(struct work_struct *work)
+void sound_workqueue_fn(struct work_struct *work)
 {
 	if (global_drv_state_p == NULL)
 		return;
 	
 	
 	mutex_lock(&sound_fifo_mutex);
-	if (global_drv_state_p->last_dma_buf == 0)
+	if (global_drv_state_p->last_sound_dma_buf == 0)
 	{
-		sfifo_put(&sound_fifo, (void *)global_drv_state_p->dma_fast_buf0);
+		sfifo_put(&sound_fifo, (void *)global_drv_state_p->sound_dma_fast_buf0);
 	}
 	else
 	{
-		sfifo_put(&sound_fifo, (void *)global_drv_state_p->dma_fast_buf1);
+		sfifo_put(&sound_fifo, (void *)global_drv_state_p->sound_dma_fast_buf1);
 	}
 	mutex_unlock(&sound_fifo_mutex);
 	
@@ -239,11 +326,11 @@ void workqueue_fn(struct work_struct *work)
 		return;
 		
 	uint32_t fifo_amount = sound_fifo.amount;
-	printk(KERN_INFO "work idx %d, fifo=%d\n", global_drv_state_p->last_dma_buf, fifo_amount);
+	printk(KERN_INFO "work idx %d, fifo=%d\n", global_drv_state_p->last_sound_dma_buf, fifo_amount);
 }
 
 
-static irqreturn_t sdrdma_irq(int irq, void *lp_p)
+static irqreturn_t sdrdma_sound_irq_handler(int irq, void *lp_p)
 {
 	struct sdrdma_local *lp = lp_p;
 	uint32_t dma_state;
@@ -253,17 +340,17 @@ static irqreturn_t sdrdma_irq(int irq, void *lp_p)
         return IRQ_HANDLED;
     }
 
-	dma_state = ioread32(lp->virtual_base);//number of buffer that is filled and ready now
+	dma_state = ioread32(lp->sound_virtual_base);//number of buffer that is filled and ready now
     	
     if (dma_state == 0)
 	{
-   		memcpy_fromio(lp->dma_fast_buf0, lp->virtual_base + 1, BUFFER_SIZE_BYTES);
+   		memcpy_fromio(lp->sound_dma_fast_buf0, lp->sound_virtual_base + 1, SOUND_BUFFER_SIZE_BYTES);
 	}
 	else
   	{
-		memcpy_fromio(lp->dma_fast_buf1, lp->virtual_base + 1 + BUFFER_SIZE_WORDS, BUFFER_SIZE_BYTES);
+		memcpy_fromio(lp->sound_dma_fast_buf1, lp->sound_virtual_base + 1 + SOUND_BUFFER_SIZE_WORDS, SOUND_BUFFER_SIZE_BYTES);
     }
-    lp->last_dma_buf = dma_state;
+    lp->last_sound_dma_buf = dma_state;
     
 	schedule_work(&workqueue);
 
@@ -277,7 +364,7 @@ static irqreturn_t sdrdma_irq(int irq, void *lp_p)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t sdrdma_wf0_irq(int irq, void *lp_p)
+static irqreturn_t sdrdma_wf0_irq_handler(int irq, void *lp_p)
 {
 	struct sdrdma_local *lp = lp_p;
 	
@@ -290,6 +377,7 @@ static irqreturn_t sdrdma_wf0_irq(int irq, void *lp_p)
 	return IRQ_HANDLED;
 }
 
+//Used to set new device permissions
 static char *devnode(struct device *dev, umode_t *mode)
 {
 	if (!mode)
@@ -354,6 +442,7 @@ static int sdrdma_probe(struct platform_device *pdev)
     struct device *dev = &pdev->dev;
     int irq_n;
     int irq_n_wf0;
+    int i;
  
     printk("Device Tree Probing 9\n"); 
     res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
@@ -372,12 +461,12 @@ static int sdrdma_probe(struct platform_device *pdev)
  
     // save the returned IRQ
     irq_n = res->start;
-    lp->irq = irq_n;
+    lp->sound_irq_n = irq_n;
     lp->is_init = 0;
  
     printk(KERN_INFO "IRQ read form DTS entry as %d\n", irq_n);
  
-    rval = request_irq(irq_n, sdrdma_irq, 0, DRIVER_NAME, lp);
+    rval = request_irq(irq_n, sdrdma_sound_irq_handler, 0, DRIVER_NAME, lp);
     if(rval)
     {
         printk(KERN_INFO "Can't get assigned Sound irq: %d\n", irq_n);
@@ -396,33 +485,53 @@ static int sdrdma_probe(struct platform_device *pdev)
     
     
     //irq_n_wf0 = irq_n + 1;
-    rval = request_irq(irq_n_wf0, sdrdma_wf0_irq, 0, DRIVER_NAME_WF, lp);
+    rval = request_irq(irq_n_wf0, sdrdma_wf0_irq_handler, 0, DRIVER_NAME_WF, lp);
     if(rval)
     {
         printk(KERN_INFO "Can't get assigned WF irq: %d\n", irq_n_wf0);
         goto error1_5;
     }
    
-    lp->dma_fast_buf0 = (uint32_t *)kmalloc(BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
-    if (!lp->dma_fast_buf0) {
+    lp->sound_dma_fast_buf0 = (uint32_t *)kmalloc(SOUND_BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
+    if (!lp->sound_dma_fast_buf0) {
 		printk("Can't not allocate memory for sdrdma device - fast0\n");
 		goto error1;
     }
     
-    lp->dma_fast_buf1 = (uint32_t *)kmalloc(BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
-    if (!lp->dma_fast_buf1) {
+    lp->sound_dma_fast_buf1 = (uint32_t *)kmalloc(SOUND_BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
+    if (!lp->sound_dma_fast_buf1) {
 		printk("Can't not allocate memory for sdrdma device - fast1\n");
-        kfree(lp->dma_fast_buf1);
+        kfree(lp->sound_dma_fast_buf0);
 		goto error1;
     }
     
-    lp->virtual_base = ioremap(SOUND_STATE_WORD_OFFSET, (BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
-    if (!lp->virtual_base)
+    lp->wf0_dma_fast_buf0 = (uint32_t *)kmalloc(WF_BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
+    if (!lp->sound_dma_fast_buf1) {
+		printk("Can't not allocate memory for sdrdma device - wf0_0\n");
+        kfree(lp->sound_dma_fast_buf0);
+        kfree(lp->sound_dma_fast_buf1);
+		goto error1;
+    }
+    
+    for (i = 0; i < WF_BUFFER_SIZE_WORDS; i++)
+    {
+    	uint32_t tmp_phase = i % 16;
+    	int32_t tmp_i = tmp_cos_data[tmp_phase];
+    	int32_t tmp_q = -tmp_sin_data[tmp_phase];
+    	uint32_t tmp_item =  (uint32_t)(0x0000FFFF & tmp_i) | ((uint32_t)(tmp_q << 16));
+    	lp->wf0_dma_fast_buf0[i] = tmp_item;
+    	
+    }
+    
+    
+    
+    lp->sound_virtual_base = ioremap(SOUND_STATE_WORD_OFFSET, (SOUND_BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
+    if (!lp->sound_virtual_base)
     {
     	printk("Can't remap memory for sdrdma device\n");
     	goto error2;
     }
-    printk("Virt Address 0x%08lx\n", *lp->virtual_base);
+    printk("Virt Address 0x%08lx\n", *lp->sound_virtual_base);
 	
 	rval = init_sys_device(lp);
 	if (rval < 0)
@@ -431,16 +540,16 @@ static int sdrdma_probe(struct platform_device *pdev)
     lp->test_cnt = 0;
     lp->is_init = 1;
     
-    sfifo_init(&sound_fifo, (void *)sound_fifo_buf, BUFFER_SIZE_BYTES, SOUND_FIFO_ITEMS);
+    sfifo_init(&sound_fifo, (void *)sound_fifo_buf, SOUND_BUFFER_SIZE_BYTES, SOUND_FIFO_ITEMS);
 
    return 0;
  
 error2:
-	kfree(lp->dma_fast_buf0);
-	kfree(lp->dma_fast_buf1);
+	kfree(lp->sound_dma_fast_buf0);
+	kfree(lp->sound_dma_fast_buf1);
 error1_5:
-	free_irq(lp->irq, lp);
-	printk(KERN_ALERT "IRQ removed, code %d", lp->irq);
+	free_irq(lp->sound_irq_n, lp);
+	printk(KERN_ALERT "Error, IRQ removed, code %d", lp->sound_irq_n);
 error1:
 	kfree(lp);
 	dev_set_drvdata(dev, NULL);
@@ -456,20 +565,18 @@ static int sdrdma_remove(struct platform_device *pdev)
 	printk(KERN_ALERT "Removing SDRDMA driver\n");
 	struct device *dev = &pdev->dev;
 	struct sdrdma_local *lp = dev_get_drvdata(dev);
-	free_irq(lp->irq, lp);
-	printk(KERN_ALERT "IRQ removed, code %d", lp->irq);
-	free_irq(lp->irq + 1, lp);
-    printk(KERN_ALERT "IRQ removed, code %d", lp->irq + 1);
+	free_irq(lp->sound_irq_n, lp);
+	printk(KERN_ALERT "IRQ removed, code %d", lp->sound_irq_n);
+	free_irq(lp->sound_irq_n + 1, lp);
+    printk(KERN_ALERT "WF0 IRQ removed, code %d", lp->sound_irq_n + 1);
     
-    kfree(lp->dma_fast_buf0);
-    kfree(lp->dma_fast_buf1);
+    kfree(lp->sound_dma_fast_buf0);
+    kfree(lp->sound_dma_fast_buf1);
     
     device_destroy(lp->dev_class, lp->sdrdma_dev);
   	class_destroy(lp->dev_class);
   	cdev_del(&lp->etx_cdev);
     unregister_chrdev_region(lp->sdrdma_dev, 1);
-    
-	//iounmap(lp->base_addr);
 
 	kfree(lp);
 	dev_set_drvdata(dev, NULL);

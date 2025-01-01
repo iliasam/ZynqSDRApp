@@ -455,32 +455,32 @@ void fpga_read_wf2(int wf_chan, void* buf, uint32_t size, uint32_t nsamples)
 
 void fpga_read_wf(int wf_chan, void* buf, uint32_t size) 
 {
-    memset(buf, 0, size);
-    /*
+    //memset(buf, 0, size);
+
     int rc;
     struct wf_read_op read_op = { (__u16)wf_chan, (__u32)buf, (__u32)size };
     while (true) {
-        // printf("In: 0x%x %d\t", read_op.address, read_op.length);
+        // printf("In: 0x%x %d\t", read_op.destination, read_op.length);
         rc = ioctl(sdrdma_fd, WF_READ, &read_op);
 
         if (rc)
             break;
-        // printf("OUT: 0x%x %d -> %d\n", read_op.address, read_op.length, read_op.readed);
+        // printf("OUT: 0x%x %d -> %d\n", read_op.destination, read_op.length, read_op.readed);
 
-        if (read_op.readed != read_op.length) {
-            read_op.address += read_op.readed;
-            read_op.length -= read_op.readed;
-            TaskSleepMsec(1);
+        if (read_op.result != RX_READ_OK) 
+        {
+            TaskSleepMsec(10);
             continue;
         }
-        else {
+        else 
+        {
+            TaskSleepMsec(10);
             break;
         }
     }
 
     if (rc)
         lprintf("Read WF failed");
-    */
 
 }
 

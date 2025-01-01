@@ -56,9 +56,9 @@ struct wf_param_op {
 // read wf data oneshot or continues
 struct wf_read_op {
     __u16 channel;
-    __u32 address; // base address
+    __u32 destination;
     __u32 length;  // length in bytes
-    __u32 readed;
+    __u32 result;
 } __attribute__((packed));
 #define WF_READ _IOWR('Z', 12, struct wf_read_op)
 
