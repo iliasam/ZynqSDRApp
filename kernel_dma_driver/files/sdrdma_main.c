@@ -64,6 +64,8 @@ struct sdrdma_local {
     
     uint32_t *wf0_dma_fast_buf0;
     volatile unsigned long *sound_virtual_base;
+    volatile unsigned long *wf0_virtual_base;
+    volatile bool wf0_data_ready;
     uint8_t is_init;
     uint8_t test_cnt;
     uint8_t test_cnt_wf0;
@@ -109,10 +111,6 @@ static int      etx_release(struct inode *inode, struct file *file);
 static ssize_t  etx_read(struct file *filp, char __user *buf, size_t len,loff_t * off);
 static ssize_t  etx_write(struct file *filp, const char *buf, size_t len, loff_t * off);
 static long     etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
-
-const int16_t tmp_sin_data[16] = {0,4,7,9,10,9,7,4,0,-4,-7,-9,-10,-9,-7,-4};
-const int16_t tmp_cos_data[16] = {10,9,7,4,0,-4,-7,-9,-10,-9,-7,-4,0,4,7,9};
-
 
 static struct file_operations fops =
 {
@@ -236,27 +234,16 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
       	}
       	else
       	{
-      		/*
-      		mutex_lock(&sound_fifo_mutex);
-
-      		if (sound_fifo.amount == 0)
+      		if (global_drv_state_p->wf0_data_ready == false)
       		{
       			tmp_wf_struct.result = RX_READ_NO_DATA;
       		}
       		else
       		{
-      		  	if (tmp_counter < 10)
-      			{
-      				printk(KERN_INFO "fifo get\n");
-      			}
-      			sfifo_get(&sound_fifo, (void *)wf_tmp_buf);
+				memcpy((void *)wf_tmp_buf, global_drv_state_p->wf0_dma_fast_buf0, WF_BUFFER_SIZE_BYTES);
       			tmp_wf_struct.result = RX_READ_OK;
+      			global_drv_state_p->wf0_data_ready = false;
       		}
-      		
-      		mutex_unlock(&sound_fifo_mutex);
-      		*/
-      		memcpy((void *)wf_tmp_buf, global_drv_state_p->wf0_dma_fast_buf0, WF_BUFFER_SIZE_BYTES);
-      		tmp_wf_struct.result = RX_READ_OK;
       	}
       	
 		//void __user * to, const void * from, unsigned long n
@@ -368,11 +355,23 @@ static irqreturn_t sdrdma_wf0_irq_handler(int irq, void *lp_p)
 {
 	struct sdrdma_local *lp = lp_p;
 	
+	if (lp->is_init == 0)
+    {
+        return IRQ_HANDLED;
+    }
+	
+	if (lp->wf0_data_ready == false)
+	{
+		memcpy_fromio(lp->wf0_dma_fast_buf0, lp->wf0_virtual_base + 2, WF_BUFFER_SIZE_BYTES);
+		lp->wf0_data_ready = true;
+	}
+	
 	if (lp->test_cnt_wf0 < 20)
     {
     	lp->test_cnt_wf0++;
     	printk("sdrdma wf0 irq: %d\n", 0);
     }
+    
     
 	return IRQ_HANDLED;
 }
@@ -512,19 +511,7 @@ static int sdrdma_probe(struct platform_device *pdev)
         kfree(lp->sound_dma_fast_buf1);
 		goto error1;
     }
-    
-    for (i = 0; i < WF_BUFFER_SIZE_WORDS; i++)
-    {
-    	uint32_t tmp_phase = i % 16;
-    	int32_t tmp_i = tmp_cos_data[tmp_phase];
-    	int32_t tmp_q = -tmp_sin_data[tmp_phase];
-    	uint32_t tmp_item =  (uint32_t)(0x0000FFFF & tmp_i) | ((uint32_t)(tmp_q << 16));
-    	lp->wf0_dma_fast_buf0[i] = tmp_item;
-    	
-    }
-    
-    
-    
+
     lp->sound_virtual_base = ioremap(SOUND_STATE_WORD_OFFSET, (SOUND_BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
     if (!lp->sound_virtual_base)
     {
@@ -532,7 +519,16 @@ static int sdrdma_probe(struct platform_device *pdev)
     	goto error2;
     }
     printk("Virt Address 0x%08lx\n", *lp->sound_virtual_base);
-	
+    
+    lp->wf0_virtual_base = ioremap(WF0_STATE_WORD_OFFSET, (WF_BUFFER_SIZE_WORDS * 2 + 2) * sizeof(uint32_t));//include status reg
+    if (!lp->wf0_virtual_base)
+    {
+    	printk("Can't remap memory for sdrdma device - WF0\n");
+    	goto error2;
+    }
+    printk("WF0 Virt Address 0x%08lx\n", *lp->wf0_virtual_base);
+    
+    
 	rval = init_sys_device(lp);
 	if (rval < 0)
 		goto error2;
@@ -543,10 +539,11 @@ static int sdrdma_probe(struct platform_device *pdev)
     sfifo_init(&sound_fifo, (void *)sound_fifo_buf, SOUND_BUFFER_SIZE_BYTES, SOUND_FIFO_ITEMS);
 
    return 0;
- 
+
 error2:
 	kfree(lp->sound_dma_fast_buf0);
 	kfree(lp->sound_dma_fast_buf1);
+	kfree(lp->wf0_dma_fast_buf0);
 error1_5:
 	free_irq(lp->sound_irq_n, lp);
 	printk(KERN_ALERT "Error, IRQ removed, code %d", lp->sound_irq_n);

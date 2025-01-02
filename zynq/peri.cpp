@@ -465,7 +465,7 @@ void fpga_read_wf(int wf_chan, void* buf, uint32_t size)
 
         if (rc)
             break;
-        // printf("OUT: 0x%x %d -> %d\n", read_op.destination, read_op.length, read_op.readed);
+        // printf("OUT: 0x%x %d -> %d\n", read_op.destination, read_op.length, read_op.result);
 
         if (read_op.result != RX_READ_OK) 
         {
@@ -474,7 +474,6 @@ void fpga_read_wf(int wf_chan, void* buf, uint32_t size)
         }
         else 
         {
-            TaskSleepMsec(10);
             break;
         }
     }
