@@ -475,7 +475,7 @@ function iq_display_IQ_cal_jog_cb(path, val)
 	   var jog = +val;
       var new_adj = cfg.clk_adj + jog;
       //console.log('jog ADC clock: prev='+ cfg.clk_adj +' jog='+ jog +' new='+ new_adj);
-      var adc_clock_ppm_limit = 100;
+      var adc_clock_ppm_limit = 200;
       var hz_limit = ext_adc_clock_nom_Hz() * adc_clock_ppm_limit / 1e6;
 
       if (new_adj < -hz_limit || new_adj > hz_limit) {

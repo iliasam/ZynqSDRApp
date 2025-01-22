@@ -33,7 +33,7 @@ extern double adc_clock_hz;
 #define ADC_CLOCK_NOM       adc_clock_hz // 66.6666 MHz 15.0 ns
 #define ADC_CLOCK_TYP       adc_clock_hz // typical 20 degC value
 #define ADC_CLOCK_PPM_TYP   100          // max auto adjustment we allow
-#define ADC_CLOCK_PPM_LIMIT 100          // max manual adjustment we allow
+#define ADC_CLOCK_PPM_LIMIT 200          // max manual adjustment we allow
 
 // works with float or int args
 // if using an int for clk_hz make it u64_t or constant ULL to prevent overflow

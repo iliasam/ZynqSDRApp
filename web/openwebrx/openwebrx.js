@@ -7239,7 +7239,7 @@ function cal_adc_dialog(new_adj, clk_diff, r1k, ppm)
          );
    } else {
       cal_adc_new_adj = new_adj;
-      var adc_clock_ppm_limit = 100;
+      var adc_clock_ppm_limit = 200;
       var hz_limit = ext_adc_clock_nom_Hz() * adc_clock_ppm_limit / 1e6;
       
       if (new_adj < -hz_limit || new_adj > hz_limit) {

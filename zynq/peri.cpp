@@ -207,7 +207,7 @@ u64_t fpga_dna() {
 
 uint32_t fpga_signature() {
     int rc;
-    uint32_t signature = 8 + (2 << 8);
+    uint32_t signature = 8 + (1 << 8);
     //rc = ioctl(sdrdma_fd, GET_SIGNATURE, &signature);
     //if (rc)
     //    sys_panic("Get FPGA Signature failed");
