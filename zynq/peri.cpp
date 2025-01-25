@@ -23,6 +23,7 @@
 
 #include "ioctl.h"
 #include <linux/spi/spidev.h>
+#include <gpiod.h>
 
 #define MAX_WF_CHANNELS         2
 
@@ -31,10 +32,20 @@
 #define SPI_CMD_SET_WF_DECIM    3
 
 #define SDRDMA_NAME             "/dev/sdrdma"
+#define GPIO_CHIP_NAME          "/dev/gpiochip0"
+
+#define AMP_LTCH_MIO            28
+#define AMP_CLK_MIO             29
+#define AMP_DATA_MIO            30
 
 #define RX_READ_BAD_SIZE	10
 #define RX_READ_NO_DATA		11
 #define RX_READ_OK			20
+
+#define GPIO_VGA_NUM_LINES      3
+#define GPIO_VGA_LTCH_OFFSET    0
+#define GPIO_VGA_CLK_OFFSET     1
+#define GPIO_VGA_DATA_OFFSET    2
 
 static bool init;
 
@@ -61,14 +72,19 @@ typedef struct
 
 waterfall_state_t wf_buf[MAX_WF_CHANNELS];
 
+/*
 struct iq2_t {
     s2_t i, q;
 } __attribute__((packed));
+*/
 
+/// @brief Used for Amp gain controlling, GPIOD library v1.6.x
+struct gpiod_line_bulk gpio_lines;
+/// @brief Used for Amp gain controlling
+struct gpiod_chip *gpio_chip;
 
-iq2_t  rnd_wf_data[1024*8];
-
-
+int request_output_lines(const char *chip_path, unsigned int *offsets, unsigned int num_lines);
+void gpio_send_vga_gain_code(uint8_t code);
 //*****************************************************
 
 void peri_init() {
@@ -105,17 +121,19 @@ void peri_init() {
     // set airband mode
     rf_enable_airband(kiwi.airband);
 
+    static const char *const chip_path = GPIO_CHIP_NAME;
+    static unsigned int line_offsets[GPIO_VGA_NUM_LINES] = { AMP_LTCH_MIO, AMP_CLK_MIO, AMP_DATA_MIO };
+    int res = request_output_lines(chip_path, line_offsets, GPIO_VGA_NUM_LINES);
+    if (!res) 
+    {
+		sys_panic("Failed to init Amp GPIO");
+	}
+
     // set default attn to 0
     rf_attn_set(0);
 
     wf_channels = (fpga_signature() >> 8) & 0x0f;
     sem_init(&wf_sem, 0, wf_channels);
-
-    for (int i = 0; i < 1024*8; i++)
-    {
-        rnd_wf_data[i].i = (s2_t)(random() % 256) - (s2_t)128;
-        rnd_wf_data[i].q = (s2_t)(random() % 256) - (s2_t)128;
-    }
 
     init = TRUE;
 }
@@ -126,10 +144,9 @@ void rf_attn_set(float f) {
 
     int gain = (int)(-f * 2);
 
-    printf("Set PE4312 with %d/0x%x\n", gain, gain);
-    //if (ioctl(sdrdma_fd, AD8370_SET, gain) < 0) {
-    //    printf("AD8370 set RF failed: %s\n", strerror(errno));
-    // }
+    printf("Set PE4312 with %f\n", f);
+
+    gpio_send_vga_gain_code(123);
 
     return;
 }
@@ -144,6 +161,10 @@ void rf_enable_airband(bool enabled) {
 
 void peri_free() {
     assert(init);
+
+    gpiod_line_release_bulk(&gpio_lines);
+    gpiod_chip_close(gpio_chip);
+
     close(sdrdma_fd);
     close(sdr_spi_fd);
 }
@@ -449,7 +470,7 @@ int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase)
 void fpga_read_wf2(int wf_chan, void* buf, uint32_t size, uint32_t nsamples)
 {
     //memset(buf, 0, size);
-    memcpy(buf, rnd_wf_data, size);
+    //memcpy(buf, rnd_wf_data, size);
     TaskSleepUsec(100);
 }
 
@@ -517,4 +538,69 @@ void fpga_free_wf(int wf_chan, int rx_chan) {
 
     int ret = sem_post(&wf_sem);
     if (ret) panic("sem_post failed");
+}
+
+int request_output_lines(const char *chip_path, unsigned int *offsets, unsigned int num_lines)
+{
+	int ret;
+    
+	gpio_chip = gpiod_chip_open(chip_path);
+	if (!gpio_chip)
+		return -1;
+    
+    ret = gpiod_chip_get_lines(gpio_chip, offsets, GPIO_VGA_NUM_LINES, &gpio_lines);
+    if(ret)
+    {
+        fprintf(stderr, "gpiod_chip_get_lines FAIL\n");
+        ret = -1;
+        goto clear_lines;
+    }
+    
+    ret = gpiod_line_request_bulk_output(&gpio_lines,"gpio_test", NULL);
+    if (ret)
+    {
+        fprintf(stderr, "gpiod_line_request_bulk FAIL\n");
+        ret = -1;
+        goto clear_lines;
+    }
+    
+    fprintf(stderr, "GPIO Request bulk OK\n");
+    return 1;
+
+
+clear_lines:
+    gpiod_line_release_bulk(&gpio_lines);
+	gpiod_chip_close(gpio_chip);
+
+	return ret;
+}
+
+/// @brief Send AD8370 code
+/// @param code - AD8370 gain code
+void gpio_send_vga_gain_code(uint8_t code)
+{
+	uint8_t i;
+    uint8_t data_bit;
+    
+    int values[GPIO_VGA_NUM_LINES] = { 0, 0, 0 };//latch, clock, data
+    //Bulk operations are slower, but I can't run "gpiod_line_bulk_get_line" well.
+    gpiod_line_set_value_bulk(&gpio_lines, values);
+    
+	for(i = 8; i > 0; i--)
+	{
+		data_bit = (code & 0x80) != 0;
+        
+        values[GPIO_VGA_DATA_OFFSET] = data_bit;
+        gpiod_line_set_value_bulk(&gpio_lines, values);
+        
+        values[GPIO_VGA_CLK_OFFSET] = 1;
+        gpiod_line_set_value_bulk(&gpio_lines, values);
+		code = code << 1;
+        values[GPIO_VGA_CLK_OFFSET] = 0;
+        gpiod_line_set_value_bulk(&gpio_lines, values);
+	}
+    values[GPIO_VGA_LTCH_OFFSET] = 1;
+    gpiod_line_set_value_bulk(&gpio_lines, values);
+    values[GPIO_VGA_DATA_OFFSET] = 0;
+    gpiod_line_set_value_bulk(&gpio_lines, values);
 }

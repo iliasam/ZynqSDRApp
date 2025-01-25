@@ -238,6 +238,8 @@ target_link_directories(websdr.bin PUBLIC
 
 target_link_libraries(websdr.bin PRIVATE crypt)
 
+target_link_libraries(websdr.bin PRIVATE gpiod)
+
 target_link_libraries(websdr.bin PRIVATE
     libfftw3f.a libfftw3f_threads.a
     ${ZLIB_LIBRARIES}
