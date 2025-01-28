@@ -38,7 +38,7 @@ function status_html()
             ),
             w3_div('w3-container',
                w3_inline('', w3_icon('id-rst-comm',  'fa-square', 16, 'grey'), w3_text('w3-margin-left w3-text-black', 'DX tab: Automatically download community database')),
-               w3_inline('', w3_icon('id-rst-swupd', 'fa-square', 16, 'grey'), w3_text('w3-margin-left w3-text-black', 'Update tab: Automatically install software updates')),
+               //w3_inline('', w3_icon('id-rst-swupd', 'fa-square', 16, 'grey'), w3_text('w3-margin-left w3-text-black', 'Update tab: Automatically install software updates')),
                w3_inline('', w3_icon('id-rst-ipbl',  'fa-square', 16, 'grey'), w3_text('w3-margin-left w3-text-black', 'Network tab: Automatically download IP blacklist'))
             )
          ) +
@@ -67,7 +67,7 @@ function status_html()
          w3_div('id-problems w3-container') +
          w3_div('id-msg-config w3-container') +
          w3_div('id-msg-debian w3-container') +
-         w3_div('id-msg-gps w3-container') +
+         //w3_div('id-msg-gps w3-container') +
          w3_div('id-msg-snr w3-container') +
          w3_div('w3-container', 'Browser: '+ navigator.userAgent) +
          '<hr>' +
@@ -607,7 +607,7 @@ function connect_update_url()
 
    ok = config_net.pub_ip;
    ok_color = ok? 'w3-background-pale-aqua' : 'w3-override-yellow';
-	w3_el('id-connect-pub-ip').innerHTML = 'Public IP address detected by Kiwi: ' +
+	w3_el('id-connect-pub-ip').innerHTML = 'Public IP address detected by SDR Server: ' +
 	   w3_div('w3-show-inline-block w3-text-black '+ ok_color, ok? config_net.pub_ip : '(no public IP address detected)');
 
    var host = decodeURIComponent(cfg.server_url);
@@ -2786,9 +2786,9 @@ function admin_draw(sdr_mode)
          w3_nav(admin_colors[ci++], 'Public', 'sdr_hu', 'admin_nav') +
          w3_nav(admin_colors[ci++], 'DX', 'dx', 'admin_nav');
    s += 
-      w3_nav(admin_colors[ci++], 'Update', 'update', 'admin_nav') +
+      //w3_nav(admin_colors[ci++], 'Update', 'update', 'admin_nav') +
       w3_nav(admin_colors[ci++], 'Network', 'network', 'admin_nav') +
-      (sdr_mode? w3_nav(admin_colors[ci++], 'GPS', 'gps', 'admin_nav') : '') +
+      //(sdr_mode? w3_nav(admin_colors[ci++], 'GPS', 'gps', 'admin_nav') : '') +
       w3_nav(admin_colors[ci++], 'Log', 'log', 'admin_nav') +
       w3_nav(admin_colors[ci++], 'Console', 'console', 'admin_nav') +
       (sdr_mode? w3_nav(admin_colors[ci++], 'Extensions', 'extensions', 'admin_nav') : '') +
@@ -2848,9 +2848,9 @@ function admin_draw(sdr_mode)
          dx_html();
 
    s +=
-		update_html() +
+		//update_html() +
 		network_html() +
-		(sdr_mode? gps_html() : '') +
+		//(sdr_mode? gps_html() : '') +
 		log_html() +
 		console_html() +
 		(sdr_mode? extensions_html() : '') +

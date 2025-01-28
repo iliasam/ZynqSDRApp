@@ -85,6 +85,7 @@ struct gpiod_chip *gpio_chip;
 
 int request_output_lines(const char *chip_path, unsigned int *offsets, unsigned int num_lines);
 void gpio_send_vga_gain_code(uint8_t code);
+void gpio_send_vga_gain_db(float gain_db);
 //*****************************************************
 
 void peri_init() {
@@ -139,14 +140,8 @@ void peri_init() {
 }
 
 void rf_attn_set(float f) {
-    if (f > 0)
-        return;
-
-    int gain = (int)(-f * 2);
-
-    printf("Set PE4312 with %f\n", f);
-
-    gpio_send_vga_gain_code(123);
+    printf("Set AD8370 with %f\n", f);
+    gpio_send_vga_gain_db(f);
 
     return;
 }
@@ -573,6 +568,40 @@ clear_lines:
 	gpiod_chip_close(gpio_chip);
 
 	return ret;
+}
+
+void gpio_send_vga_gain_db(float gain_db)
+{
+    if (gain_db < -20)
+        gain_db = -20;
+    else if (gain_db > 34)
+        gain_db = 34;
+    //Convert dB to V/V
+    float gain_voltage = powf(10.0f, (gain_db / 20.0f));
+
+    float code_lg = gain_voltage / 0.059f;//low gain - value from datasheet
+    float code_hg = gain_voltage / 0.409f;//high gain - value from datasheet
+
+    if (code_hg > 127.0f)
+        code_hg = 127.0f;
+
+
+    uint8_t final_code;
+    if (gain_db >= 16.5f) //close to low gain maximum
+    {
+        if (code_hg > 127.0f)
+            code_hg = 127.0f;
+        final_code = (uint8_t)code_hg;
+        final_code |= 0x80;//Activeate high gain
+    }
+    else
+    {
+        if (code_lg > 127.0f)
+            code_lg = 127.0f;
+        final_code = (uint8_t)code_lg;
+    }
+    printf("Set AD8370 gain code %d\n", final_code);
+    gpio_send_vga_gain_code(final_code);
 }
 
 /// @brief Send AD8370 code

@@ -232,7 +232,7 @@ int main(int argc, char* argv[]) {
         wf_chans = (signature >> 8) & 0x0f;
 
     snd_rate = SND_RATE_4CH;
-    rx_decim = (int)(ADC_CLOCK_TYP / 12000); // 12k
+    rx_decim = (int)(ADC_CLOCK_TYP / 12000); // 12k //iliasam - todo
 
     bool no_wf = cfg_bool("no_wf", &err, CFG_OPTIONAL);
     if (err) no_wf = false;
