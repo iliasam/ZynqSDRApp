@@ -870,20 +870,20 @@ static void sample_wf(int rx_chan) {
 
     // create waterfall
     assert(wf_fps[wf->speed] != 0);
-    int desired = 1000 / wf_fps[wf->speed];
+    int desired_wf_ms = 1000 / wf_fps[wf->speed];
 
-    // desired frame rate greater than what full sampling can deliver, so start overlapped sampling
+    // desired_wf_ms frame rate greater than what full sampling can deliver, so start overlapped sampling
     if (wf->check_overlapped_sampling && !kiwi.wf_share) 
     {
         wf->check_overlapped_sampling = false;
 
-        if (wf->samp_wait_us / 1000 >= desired / 2) 
+        if (wf->samp_wait_us / 1000 >= desired_wf_ms / 2) 
         {
             wf->overlapped_sampling = true;
 
 #ifdef WF_INFO
-            if (!bg) printf("---- WF%d OLAP z%d samp_wait %d >= %d(2x) desired %d\n",
-                            rx_chan, wf->zoom, wf->samp_wait_us, 2 * desired, desired);
+            if (!bg) printf("---- WF%d OLAP z%d samp_wait %d >= %d(2x) desired_wf_ms %d\n",
+                            rx_chan, wf->zoom, wf->samp_wait_us, 2 * desired_wf_ms, desired_wf_ms);
 #endif
 
             fpga_reset_wf(rx_chan, true);
@@ -893,8 +893,8 @@ static void sample_wf(int rx_chan) {
             wf->overlapped_sampling = false;
 
 #ifdef WF_INFO
-            if (!bg) printf("---- WF%d NON-OLAP z%d samp_wait %d < %d(2x) desired %d\n",
-                            rx_chan, wf->zoom, wf->samp_wait_us, 2 * desired, desired);
+            if (!bg) printf("---- WF%d NON-OLAP z%d samp_wait %d < %d(2x) desired_wf_ms %d\n",
+                            rx_chan, wf->zoom, wf->samp_wait_us, 2 * desired_wf_ms, desired_wf_ms);
 #endif
         }
     }
@@ -918,7 +918,6 @@ static void sample_wf(int rx_chan) {
         }
 
         fpga_read_wf(wf_chan, sample_data, sizeof(iq_t) * WF_C_NSAMPS);
-        //fpga_read_wf2(wf_chan, sample_data, sizeof(iq_t) * WF_C_NSAMPS, WF_C_NSAMPS);
 
         if (kiwi.wf_share)
             fpga_free_wf(wf_chan, rx_chan);
@@ -1026,11 +1025,11 @@ static void sample_wf(int rx_chan) {
     //}
 
     int actual = timer_ms() - wf->mark;
-    int delay = desired - actual;
-    // printf("%d %d %d\n", delay, actual, desired);
+    int delay = desired_wf_ms - actual;
+    // printf("%d %d %d\n", delay, actual, desired_wf_ms);
 
     // full sampling faster than needed by frame rate
-    if (desired > actual) {
+    if (desired_wf_ms > actual) {
         evWF(EC_EVENT, EV_WF, -1, "WF", "TaskSleep wait FPS");
         WFSleepReasonMsec("wait frame", delay);
         evWF(EC_EVENT, EV_WF, -1, "WF", "TaskSleep wait FPS done");
@@ -1040,6 +1039,7 @@ static void sample_wf(int rx_chan) {
     }
     wf->mark = timer_ms();
 }
+//<<<<
 
 static void aperture_auto(wf_inst_t* wf, u1_t* bp) {
     int i, j, rx_chan = wf->rx_chan;

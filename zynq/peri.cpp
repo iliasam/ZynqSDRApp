@@ -231,6 +231,7 @@ uint32_t fpga_signature() {
     return signature;
 }
 
+/// @brief Called once at startup
 void fpga_start_rx() {
     //uint32_t decim = uint32_t(ADC_CLOCK_NOM / 12000 / 256);
     //int rc = ioctl(sdrdma_fd, RX_START, decim);
@@ -238,6 +239,9 @@ void fpga_start_rx() {
     //    sys_panic("Start RX failed");
 }
 
+/// @brief Set sound channel frequency
+/// @param rx_chan Starts from 0
+/// @param i_phase New value of DDS phase accumulator increment
 void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
 
     uint8_t payload_tx[6];
@@ -245,8 +249,6 @@ void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
 
     payload_tx[0] = SPI_CMD_SET_RX_FREQ;
     payload_tx[1] = (uint8_t)rx_chan;
-
-    //printf("SPI1: %lu\n", (uint32_t)i_phase);
 
     payload_tx[2] = (uint8_t)(((uint32_t)i_phase & 0xFF000000) >> 24);
     payload_tx[3] = (uint8_t)(((uint32_t)i_phase & 0x00FF0000) >> 16);
@@ -258,12 +260,12 @@ void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
     printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
+/// @brief Request sound data (for all channels)
+/// @param buf - destitation buffer
+/// @param size - bytes to copy
 void fpga_read_rx(void* buf, uint32_t size) {
-    memset(buf, 0, size);
+    //memset(buf, 0, size);
 
-    static uint32_t test_cnt = 0;
-    test_cnt++;
-    
     int rc;
     struct rx_read_op read_op = { (__u32)buf, size }; //address, length
 
@@ -272,9 +274,6 @@ void fpga_read_rx(void* buf, uint32_t size) {
         rc = ioctl(sdrdma_fd, RX_READ, &read_op);
         if (rc)
             break;
-
-        //if (test_cnt < 20)
-        //    printf("OUT: 0x%x len=%d res= %d \n", read_op.destination, read_op.length, read_op.result);
 
         if (read_op.result != RX_READ_OK)
         {
@@ -365,8 +364,6 @@ int fpga_set_led(bool enabled) {
     return fpga_set_bit(enabled, GPIO_LED);
 }
 
-
-
 void fpga_setovmask(uint32_t mask) {
     /// TODO
 }
@@ -379,7 +376,7 @@ void fpga_setadclvl(uint32_t val) {
 
 /// @brief Start WF channel read
 /// @param wf_chan 
-/// @param cont - continues
+/// @param cont - continues, set to true when overlapped mode is needed
 /// @return 
 int fpga_reset_wf(int wf_chan, bool cont) {
     int rc = 0;
@@ -398,6 +395,9 @@ int fpga_reset_wf(int wf_chan, bool cont) {
     return rc;
 }
 
+/// @brief Set waterfall channel frequency
+/// @param wf_chan channel, starts from 0
+/// @param i_phase New value of DDS phase accumulator increment
 void fpga_set_wf_freq(int wf_chan, uint64_t i_phase) 
 {
     uint8_t payload_tx[6];
@@ -416,6 +416,9 @@ void fpga_set_wf_freq(int wf_chan, uint64_t i_phase)
     printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
+/// @brief Set waterfall decimation
+/// @param wf_chan - channel, starts from 0
+/// @param decimation - decimation factor, 1,2,4....
 void fpga_set_wf_cic_decim(int wf_chan, int decimation) 
 {
     uint8_t payload_tx[6];
@@ -433,6 +436,11 @@ void fpga_set_wf_cic_decim(int wf_chan, int decimation)
     printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
+/// @brief Set both waterfall frequency and decimation
+/// @param wf_chan channel, starts from 0
+/// @param decimate decimation factor, 1,2,4....
+/// @param i_phase New value of DDS phase accumulator increment
+/// @return 
 int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase) 
 {
     int rc = 0;
@@ -462,12 +470,7 @@ int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase)
     return rc;
 }
 
-void fpga_read_wf2(int wf_chan, void* buf, uint32_t size, uint32_t nsamples)
-{
-    //memset(buf, 0, size);
-    //memcpy(buf, rnd_wf_data, size);
-    TaskSleepUsec(100);
-}
+
 
 void fpga_read_wf(int wf_chan, void* buf, uint32_t size) 
 {
@@ -496,7 +499,6 @@ void fpga_read_wf(int wf_chan, void* buf, uint32_t size)
 
     if (rc)
         lprintf("Read WF failed");
-
 }
 
 int fpga_get_wf(int rx_chan) {

@@ -67,9 +67,7 @@ static void snd_service() {
         }
 
         fpga_read_rx(snd_data, sizeof(s4_t) * 2 * rx_chans * nrx_samps);
-        //fpga_read_rx2(snd_data, sizeof(s4_t) * 2 * rx_chans * nrx_samps, nrx_samps);
         
-
         for (int s_idx = 0; s_idx < nrx_samps; s_idx++) 
         {
             s4_t* data = &snd_data[s_idx * 2 * rx_chans];
