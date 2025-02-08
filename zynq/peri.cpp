@@ -30,6 +30,7 @@
 #define SPI_CMD_SET_RX_FREQ     1
 #define SPI_CMD_SET_WF_FREQ     2
 #define SPI_CMD_SET_WF_DECIM    3
+#define SPI_CMD_START_WF        4
 
 #define SDRDMA_NAME             "/dev/sdrdma"
 #define GPIO_CHIP_NAME          "/dev/gpiochip0"
@@ -86,6 +87,8 @@ struct gpiod_chip *gpio_chip;
 int request_output_lines(const char *chip_path, unsigned int *offsets, unsigned int num_lines);
 void gpio_send_vga_gain_code(uint8_t code);
 void gpio_send_vga_gain_db(float gain_db);
+
+void fpga_start_waterfall(int wf_chan);
 //*****************************************************
 
 void peri_init() {
@@ -113,7 +116,7 @@ void peri_init() {
     }
     else
     {
-        printf("Succesfiully opened kernel device driver!\n");
+        printf("Successfully opened kernel device driver!\n");
     }
 
     //fcntl(sdrdma_fd, F_SETFD, FD_CLOEXEC);
@@ -223,11 +226,7 @@ u64_t fpga_dna() {
 
 uint32_t fpga_signature() {
     int rc;
-    uint32_t signature = 8 + (1 << 8);
-    //rc = ioctl(sdrdma_fd, GET_SIGNATURE, &signature);
-    //if (rc)
-    //    sys_panic("Get FPGA Signature failed");
-
+    uint32_t signature = 8 + (2 << 8);
     return signature;
 }
 
@@ -386,11 +385,7 @@ int fpga_reset_wf(int wf_chan, bool cont) {
         data |= WF_READ_CONTINUES;
     }
 
-    //rc = ioctl(sdrdma_fd, WF_START, wf_chan);
-    //if (rc)
-    //    lprintf("WF Start failed");
-
-    // printf("WF %d started[%d]\n", wf_chan, cont);
+    fpga_start_waterfall(wf_chan);
 
     return rc;
 }
@@ -417,8 +412,8 @@ void fpga_set_wf_freq(int wf_chan, uint64_t i_phase)
 }
 
 /// @brief Set waterfall decimation
-/// @param wf_chan - channel, starts from 0
-/// @param decimation - decimation factor, 1,2,4....
+/// @param wf_chan Channel, starts from 0
+/// @param decimation Decimation factor, 1,2,4....
 void fpga_set_wf_cic_decim(int wf_chan, int decimation) 
 {
     uint8_t payload_tx[6];
@@ -436,9 +431,24 @@ void fpga_set_wf_cic_decim(int wf_chan, int decimation)
     printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
+/// @brief Start waterfall capture
+/// @param wf_chan Channel, starts from 0
+void fpga_start_waterfall(int wf_chan) 
+{
+    uint8_t payload_tx[6];
+    uint8_t payload_rx[6];
+    memset(payload_tx, 0 , 6);
+    payload_tx[0] = SPI_CMD_START_WF;
+    payload_tx[1] = (uint8_t)wf_chan + 1;
+
+    spi_transfer(sdr_spi_fd, payload_tx, payload_rx, sizeof(payload_tx));
+}
+
+
+
 /// @brief Set both waterfall frequency and decimation
-/// @param wf_chan channel, starts from 0
-/// @param decimate decimation factor, 1,2,4....
+/// @param wf_chan Channel, starts from 0
+/// @param decimate Decimation factor, 1,2,4....
 /// @param i_phase New value of DDS phase accumulator increment
 /// @return 
 int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase) 
@@ -474,8 +484,6 @@ int fpga_wf_param(int wf_chan, int decimate, uint64_t i_phase)
 
 void fpga_read_wf(int wf_chan, void* buf, uint32_t size) 
 {
-    //memset(buf, 0, size);
-
     int rc;
     struct wf_read_op read_op = { (__u16)wf_chan, (__u32)buf, (__u32)size };
     while (true) {
@@ -488,7 +496,7 @@ void fpga_read_wf(int wf_chan, void* buf, uint32_t size)
 
         if (read_op.result != RX_READ_OK) 
         {
-            TaskSleepMsec(10);
+            TaskSleepMsec(1);
             continue;
         }
         else 

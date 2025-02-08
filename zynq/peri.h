@@ -21,6 +21,10 @@
 //Width of the acumulator in bits - waterfall
 #define RX_WF_DDS_RESOLUTION        32 //bits
 
+#define SOUND_CIC1_DECIM        119
+#define SOUND_CIC2_DECIM        14
+#define SOUND_DECIM             (SOUND_CIC1_DECIM * SOUND_CIC2_DECIM * 2) //2 - trick with no compensation filter in kiwi
+
 
 void peri_init();
 void peri_free();

@@ -232,7 +232,7 @@ int main(int argc, char* argv[]) {
         wf_chans = (signature >> 8) & 0x0f;
 
     snd_rate = SND_RATE_4CH;
-    rx_decim = (int)(ADC_CLOCK_TYP / 12000); // 12k //iliasam - todo
+    rx_decim = (int)(SOUND_DECIM); // ~12k
 
     bool no_wf = cfg_bool("no_wf", &err, CFG_OPTIONAL);
     if (err) no_wf = false;
@@ -244,7 +244,7 @@ int main(int argc, char* argv[]) {
     assert(wf_chans <= MAX_WF_CHANS);
 
     nrx_samps = NRX_SAMPS_CHANS(rx_chans);
-    lprintf("firmware: RX rx_decim=%d USE_RX_CICF=%d\n", rx_decim, 0);
+    lprintf("firmware: RX rx_decim=%d\n", rx_decim);
     lprintf("firmware: RX srate=%.3f(%d) samps=%d\n",
             ext_update_get_sample_rateHz(ADC_CLK_TYP), snd_rate, nrx_samps);
 
