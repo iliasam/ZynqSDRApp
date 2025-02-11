@@ -119,14 +119,14 @@ function control_html()
 		w3_third('w3-valign', '',
          w3_div('',
             w3_div('',
-               w3_button('w3-aqua w3-margin', 'Web-888 server restart', 'control_restart_cb'),
-               w3_button('w3-blue w3-margin', 'Web-888 reboot', 'control_reboot_cb'),
-               w3_button('w3-red w3-margin', 'Web-888 power off', 'control_power_off_cb')
+               w3_button('w3-aqua w3-margin', 'This server restart', 'control_restart_cb'),
+               w3_button('w3-blue w3-margin', 'This server reboot', 'control_reboot_cb'),
+               w3_button('w3-red w3-margin', 'This server power off', 'control_power_off_cb')
             )
          ),
-         w3_div('w3-center',
-            w3_switch_label('w3-center w3-restart', 'HF Bandwidth Selection', '32Mhz', '64Mhz', 'adm.narrowband', adm.narrowband, 'wf_narrowband_enabled_cb')
-         ),
+         //w3_div('w3-center',
+         //   w3_switch_label('w3-center w3-restart', 'HF Bandwidth Selection', '32Mhz', '64Mhz', 'adm.narrowband', adm.narrowband, 'wf_narrowband_enabled_cb')
+         //),
          w3_div('w3-center',
             w3_switch_label('w3-center w3-restart', 'Share WF channels with all users', 'Share', 'Exclusive', 'adm.wf_share', adm.wf_share, 'wf_share_enabled_cb')
          )
@@ -404,7 +404,7 @@ function connect_html()
 			'<header class="w3-container w3-yellow"><h5>' +
 			'If you are not able to make an incoming connection from the Internet to your SDR because ' +
 			'of problems <br> with your router or Internet Service Provider (ISP) then please consider using' +
-         '<a href="http://www.rx-888.com/web/manual" target="_blank">reverse proxy service</a>' +
+         ' reverse proxy service</a>' +
 			'</h5></header>'
 		) +
 		
@@ -2934,9 +2934,9 @@ function admin_update(p)
    var obj = kiwi_JSON_parse('admin_update', json);
 	if (obj) admin.reg_status = obj;
 	
-	// rx.rx-888.com registration status
+	// Common Server list registration status
 	if (adm.kiwisdr_com_register && admin.reg_status.kiwisdr_com != undefined && admin.reg_status.kiwisdr_com != '') {
-	   w3_innerHTML('id-kiwisdr_com-reg-status', 'Web-888 public list registration: successful');
+	   w3_innerHTML('id-kiwisdr_com-reg-status', 'OpenZynqSDR public list registration: successful');
 	}
 	
 	// GPS has had a solution, show buttons

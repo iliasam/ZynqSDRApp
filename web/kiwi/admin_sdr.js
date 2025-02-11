@@ -208,12 +208,12 @@ function config_html()
 	var s4 =
 		'<hr>' +
 		w3_third('w3-margin-bottom w3-text-teal', 'w3-container',
-			w3_divs('w3-restart/w3-center w3-tspace-8',
-				w3_select_get_param('w3-width-auto', 'Status LED brightness', '', 'led_brightness', led_brightness_i, 'admin_select_cb', 0),
-				w3_div('w3-text-black',
-					'Sets brightness of the 4 LEDs <br> that show status info.'
-				)
-			),
+			//w3_divs('w3-restart/w3-center w3-tspace-8',
+			//	w3_select_get_param('w3-width-auto', 'Status LED brightness', '', 'led_brightness', led_brightness_i, 'admin_select_cb', 0),
+			//	w3_div('w3-text-black',
+			//		'Sets brightness of the 4 LEDs <br> that show status info.'
+			//	)
+			//),
 
 			w3_divs('w3-restart/w3-center w3-tspace-8',
 				w3_select_get_param('w3-width-auto', 'CAT interface baud rate', '', 'CAT_baud', admin_sdr.CAT_baud_s, 'admin_select_cb', 0),
@@ -301,7 +301,8 @@ function config_html()
 		) +
 		'<hr>';
 
-	return w3_div('id-config w3-hide', s1 + s2 + s3 + s4 + s6 + s7);
+	//return w3_div('id-config w3-hide', s1 + s2 + s3 + s4 + s6 + s7);
+   return w3_div('id-config w3-hide', s1 + s2 + s3 + s4);//Removed elements
 }
 
 function config_mode_cb(path, idx, first)
@@ -986,13 +987,15 @@ function kiwi_reg_html()
 		w3_div('',
          w3_div('w3-margin-T-10 w3-valign',
             '<header class="w3-container w3-yellow"><h5>' +
-            'More information on <a href="http://www.rx-888.com/web/guide/admin/public.html" target="_blank">rx-888.com</a><br><br>' +
+            'More information on <a href="http://kiwisdr.com/info#id-config-kiwi-reg" target="_blank">kiwisdr.com</a><br><br>' +
 
-            'To list your SDR on <a href="http://www.rx-888.com/web/rx" target="_blank">www.rx-888.com/web/rx</a> ' +
+            'To list your Kiwi on <a href="http://rx.kiwisdr.com" target="_blank">rx.kiwisdr.com</a> ' +
             'edit the fields below and set the "<i>Register</i>" switch to <b>Yes</b>. ' +
             'Look for a successful status result within a few minutes.<br>' +
             
-            'The "<i>Location (lat, lon)</i>" field must be set properly for your SDR to be listed in the correct location.' +
+            'The "<i>Location (lat, lon)</i>" field must be set properly for your Kiwi to be listed at the correct location on ' +
+            '<a href="http://map.kiwisdr.com" target="_blank">map.kiwisdr.com</a>' +
+
             '</h5></header>'
          )
       ) +
@@ -1000,11 +1003,11 @@ function kiwi_reg_html()
 		'<hr>' +
 
 		w3_divs('w3-margin-bottom w3-container w3-center',
-         w3_switch_label('w3-label-inline w3-label-left w3-center', 'Register on <a href="http://www.rx-888.com/web/rx" target="_blank">www.rx-888.com/web/rx</a>?',
+      w3_switch_label('w3-label-inline w3-label-left w3-center', 'Register on <a href="http://rx.kiwisdr.com" target="_blank">rx.kiwisdr.com</a>?',
             'Yes', 'No', 'adm.kiwisdr_com_register', adm.kiwisdr_com_register, 'kiwisdr_com_register_cb'),
          w3_div('id-kiwisdr_com-reg-status-container',
             w3_div('w3-container',
-               w3_label('w3-show-inline-block w3-margin-R-16 w3-text-teal', 'rx-888.com registration status:') +
+               w3_label('w3-show-inline-block w3-margin-R-16 w3-text-teal', 'kiwisdr.com registration status:') +
                w3_div('id-kiwisdr_com-reg-status w3-show-inline-block w3-padding-LR-8 w3-text-black', '')
             )
          )
@@ -1235,7 +1238,7 @@ function dx_html()
             w3_text('', 'Warning: The configuration file /root/kiwi.config/dxcfg.json is corrupt. <br>' +
                'The error is: '+ dx.dxcfg_parse_error +
                '<br>Please use a text editor to fix the file (for example "nano /root/kiwi.config/dxcfg.json" in the admin console tab), ' +
-               'or restore from backup, and restart the Kiwi. <br> Or ask for help on the Kiwi forum or email support@rx-888.com')
+               'or restore from backup, and restart the Kiwi. <br>')
          );
       color = ' w3-red';
 	   abort = true;
@@ -1247,7 +1250,7 @@ function dx_html()
             w3_text('', 'Warning: The configuration file /root/kiwi.config/dx_community_config.json is corrupt. <br>' +
                'The error is: '+ dx.dxcomm_cfg_parse_error +
                '<br>Please use a text editor to fix the file (for example "nano /root/kiwi.config/dx_community_config.json" in the admin console tab), ' +
-               'or restore from backup, and restart the Kiwi. <br> Or ask for help on the Kiwi forum or email support@rx-888.com')
+               'or restore from backup, and restart the Kiwi. <br>')
          );
       color = ' w3-red';
 	}
@@ -1321,7 +1324,7 @@ function dx_html()
       w3_inline('w3-margin-T-16 w3-halign-space-between/',
          w3_inline('/w3-margin-between-16 w3-valign',
             w3_button(dx.button_section, '-', 'dx_expand_cb', 0),
-            w3_link(dx.link1, 'http://www.rx-888.com/web/guide/admin/dx.html#stored-dx-labels', 'Stored DX labels'),
+            w3_link(dx.link1, 'http://kiwisdr.com/info#id-config-DX-list', 'Stored DX labels'),
             w3_text('id-dx-list-saved w3-margin-left w3-padding-medium w3-text-black w3-hide', 'Changes saved')
          ),
          w3_inline('/w3-margin-between-16 w3-valign',

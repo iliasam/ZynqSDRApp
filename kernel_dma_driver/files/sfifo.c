@@ -1,6 +1,7 @@
 #include "sfifo.h"
 #include <linux/string.h>
 
+//FIFO for saving binary items with a fixed size
 
 void sfifo_init(sfifo_t *fifo, void *buf, uint32_t item_size_bytes, uint32_t fifo_size_items)
 {
@@ -10,6 +11,7 @@ void sfifo_init(sfifo_t *fifo, void *buf, uint32_t item_size_bytes, uint32_t fif
     fifo->item_size = item_size_bytes;
 }
 
+//Put item to the FIFO
 int sfifo_put(sfifo_t *fifo, void *item_p)
 {
     if (fifo->amount >= fifo->size)
@@ -32,6 +34,7 @@ int sfifo_put(sfifo_t *fifo, void *item_p)
     return 0;
 }
 
+//Put item from the FIFO
 int sfifo_get(sfifo_t *fifo, void *item_p)
 {
     if (fifo->amount == 0)

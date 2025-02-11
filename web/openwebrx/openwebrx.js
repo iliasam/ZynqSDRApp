@@ -9047,7 +9047,7 @@ function dx_help(show)
                '<br><br>' +
                
                'Information about using the controls for editing the stored labels can be found ' +
-               '<a href="http://www.rx-888.com/web/" target="_blank">here</a>.' +
+               '<a href="http://kiwisdr.com/info#id-user-marker" target="_blank">here</a>.' +
                '<br><br>' +
                
                'Because there are so many EiBi labels (about 6000) they are organized into 12 categories with visibility ' +
@@ -10270,7 +10270,7 @@ function panels_setup()
 
 	w3_el("id-readme-inner").innerHTML =
 		'<span style="font-size: 15pt; font-weight: bold;">Welcome!</span>' +
-		'&nbsp;&nbsp;&nbsp;Project website: <a href="http://www.rx-888.com/web" target="_blank">www.rx-888.com/web</a>&nbsp;&nbsp;&nbsp;&nbsp;Here are some tips:' +
+		'&nbsp;&nbsp;&nbsp;Project website: <a href="https://github.com/iliasam/OpenZynqSDRApp" target="_blank">github.com/iliasam/OpenZynqSDRApp</a>&nbsp;&nbsp;&nbsp;&nbsp;Here are some tips:' +
 		'<ul style="padding-left: 12px;">' +
 		'<li> Windows: Firefox, Chrome & Edge work; IE does not work. </li>' +
 		'<li> Mac & Linux: Safari, Firefox, Chrome & Opera should work fine. </li>' +
@@ -10310,7 +10310,7 @@ function panels_setup()
 	      w3_text('w3-text-css-orange', 'Links'),
 	      w3_text('',
             (admin_email? '<a href="javascript:sendmail(\''+ admin_email +'\');">Owner/Admin</a> | ' : '') +
-            '<a href="http://www.rx-888.com" target="_blank">Web-888</a> '
+            '<a href="https://github.com/iliasam/OpenZynqSDRApp" target="_blank">OpenZynqSDR</a> '
          )
 		) +
 		w3_div('id-status-adc') +
