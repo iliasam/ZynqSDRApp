@@ -877,7 +877,7 @@ static void sample_wf(int rx_chan) {
     {
         wf->check_overlapped_sampling = false;
 
-        if (wf->samp_wait_us / 1000 >= desired_wf_ms / 2) 
+        if ((wf->samp_wait_us / 1000 >= desired_wf_ms / 2) && USE_WF_OVERLAP_SAMPLING)
         {
             wf->overlapped_sampling = true;
 

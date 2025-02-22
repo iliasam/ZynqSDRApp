@@ -67,7 +67,8 @@ void clock_init() {
     if (clk.ext_ADC_clk)
         clk.clock_ref = 10 * MHz;
     else
-        clk.clock_ref = eeprom_refclock();
+        clk.clock_ref = 0;// "clock_ref" is not used in this app
+        //clk.clock_ref = eeprom_refclock();
 
     clk.adc_clock_base = ADC_CLOCK_TYP;
     printf("ADC_CLOCK: %.6f MHz %s\n",

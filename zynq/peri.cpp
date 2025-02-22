@@ -25,7 +25,13 @@
 #include <linux/spi/spidev.h>
 #include <gpiod.h>
 
+#define EN_SPI_CMD_PRINTF
+
 #define MAX_WF_CHANNELS         2
+
+// NUmber of implemented channels
+#define HW_WF_CHANNELS          2
+#define HW_SOUND_CHANNELS       8
 
 #define SPI_CMD_SET_RX_FREQ     1
 #define SPI_CMD_SET_WF_FREQ     2
@@ -35,18 +41,30 @@
 #define SDRDMA_NAME             "/dev/sdrdma"
 #define GPIO_CHIP_NAME          "/dev/gpiochip0"
 
+// ZYNQ MIO lines
 #define AMP_LTCH_MIO            28
 #define AMP_CLK_MIO             29
 #define AMP_DATA_MIO            30
 
+// Values for SDRDMA driver
 #define RX_READ_BAD_SIZE	10
 #define RX_READ_NO_DATA		11
 #define RX_READ_OK			20
 
+// AD8370
 #define GPIO_VGA_NUM_LINES      3
 #define GPIO_VGA_LTCH_OFFSET    0
 #define GPIO_VGA_CLK_OFFSET     1
 #define GPIO_VGA_DATA_OFFSET    2
+
+
+#ifdef EN_SPI_CMD_PRINTF
+    #define spi_printf(fmt, ...) \
+        printf(fmt, ## __VA_ARGS__)
+#else
+    #define spi_printf(fmt, ...)
+#endif
+
 
 static bool init;
 
@@ -119,9 +137,6 @@ void peri_init() {
         printf("Successfully opened kernel device driver!\n");
     }
 
-    //fcntl(sdrdma_fd, F_SETFD, FD_CLOEXEC);
-    //ioctl(sdrdma_fd, CLK_SET, int_clk);
-
     // set airband mode
     rf_enable_airband(kiwi.airband);
 
@@ -150,10 +165,6 @@ void rf_attn_set(float f) {
 }
 
 void rf_enable_airband(bool enabled) {
-    //if (ioctl(sdrdma_fd, MODE_SET, (int)enabled) < 0) {
-    //    printf("AD8370 set mode failed %s\n", strerror(errno));
-    //}
-
     return;
 }
 
@@ -169,10 +180,6 @@ void peri_free() {
 
 static std::atomic<int> write_enabled(0);
 void sd_enable(bool write) {
-    if (write) {
-    }
-    else {
-    }
 }
 
 static int last = 100;
@@ -189,23 +196,6 @@ void spi_transfer(int fd, uint8_t *tx, uint8_t *rx, size_t len)
 		.bits_per_word = SPI_BITS,
 	};
 
-    /*
-	if (mode & SPI_TX_QUAD)
-		tr.tx_nbits = 4;
-	else if (mode & SPI_TX_DUAL)
-		tr.tx_nbits = 2;
-	if (mode & SPI_RX_QUAD)
-		tr.rx_nbits = 4;
-	else if (mode & SPI_RX_DUAL)
-		tr.rx_nbits = 2;
-	if (!(mode & SPI_LOOP)) {
-		if (mode & (SPI_TX_QUAD | SPI_TX_DUAL))
-			tr.rx_buf = 0;
-		else if (mode & (SPI_RX_QUAD | SPI_RX_DUAL))
-			tr.tx_buf = 0;
-	}
-    */
-
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if (ret < 1)
 		printf("can't send spi message");
@@ -217,16 +207,12 @@ void spi_transfer(int fd, uint8_t *tx, uint8_t *rx, size_t len)
 u64_t fpga_dna() {
     int rc;
     uint64_t signature = 0;
-    //rc = ioctl(sdrdma_fd, GET_DNA, &signature);
-    //if (rc)
-    //    sys_panic("Get FPGA Signature failed");
-
     return signature;
 }
 
 uint32_t fpga_signature() {
     int rc;
-    uint32_t signature = 8 + (2 << 8);
+    uint32_t signature = HW_SOUND_CHANNELS + (HW_WF_CHANNELS << 8);
     return signature;
 }
 
@@ -256,15 +242,13 @@ void fpga_rxfreq(int rx_chan, uint64_t i_phase) {
 
     spi_transfer(sdr_spi_fd, payload_tx, payload_rx, sizeof(payload_tx));
 
-    printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
+    spi_printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
 /// @brief Request sound data (for all channels)
 /// @param buf - destitation buffer
 /// @param size - bytes to copy
 void fpga_read_rx(void* buf, uint32_t size) {
-    //memset(buf, 0, size);
-
     int rc;
     struct rx_read_op read_op = { (__u32)buf, size }; //address, length
 
@@ -296,18 +280,6 @@ void fpga_start_pps() {
 
 uint64_t fpga_read_pps() {
     uint32_t pps = 0;
-    /*
-    int rc;
-
-    rc = ioctl(sdrdma_fd, PPS_READ, &pps);
-    if (rc && errno == EBUSY) {
-        return 0;
-    }
-
-    if (rc)
-        lprintf("read PPS failed");
-    */
-
     return pps;
 }
 
@@ -330,45 +302,24 @@ int fpga_set_antenna(int mask) {
     return 0;
 }
 
-static int fpga_set_bit(bool enabled, int bit) {
-    /*
-    uint32_t gpio;
-    int rc = ioctl(sdrdma_fd, GET_GPIO_MASK, &gpio);
-    if (rc)
-        lprintf("Get GPIO failed");
-
-    if (enabled)
-        gpio |= bit;
-    else
-        gpio &= ~bit;
-
-    rc = ioctl(sdrdma_fd, SET_GPIO_MASK, gpio);
-    if (rc)
-        lprintf("Set GPIO failed");
-    */
 
 
+int fpga_set_pga(bool enabled) {
     return 0;
 }
 
-int fpga_set_pga(bool enabled) {
-    return fpga_set_bit(enabled, GPIO_PGA);
-}
-
 int fpga_set_dither(bool enabled) {
-    return fpga_set_bit(enabled, GPIO_DITHER);
+    return 0;
 }
 
 int fpga_set_led(bool enabled) {
-    return fpga_set_bit(enabled, GPIO_LED);
+    return 0;
 }
 
 void fpga_setovmask(uint32_t mask) {
-    /// TODO
 }
 
 void fpga_setadclvl(uint32_t val) {
-    /// TODO
 }
 
 //WATERFALL *********************************************
@@ -408,7 +359,7 @@ void fpga_set_wf_freq(int wf_chan, uint64_t i_phase)
 
     spi_transfer(sdr_spi_fd, payload_tx, payload_rx, sizeof(payload_tx));
 
-    printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
+    spi_printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
 /// @brief Set waterfall decimation
@@ -428,7 +379,7 @@ void fpga_set_wf_cic_decim(int wf_chan, int decimation)
 
     spi_transfer(sdr_spi_fd, payload_tx, payload_rx, sizeof(payload_tx));
 
-    printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
+    spi_printf("SPI: CMD=%x CH=%x %x %x %x %x\n", payload_tx[0], payload_tx[1], payload_tx[2], payload_tx[3], payload_tx[4], payload_tx[5]);
 }
 
 /// @brief Start waterfall capture
@@ -545,6 +496,7 @@ void fpga_free_wf(int wf_chan, int rx_chan) {
     if (ret) panic("sem_post failed");
 }
 
+// Used for GPIO init
 int request_output_lines(const char *chip_path, unsigned int *offsets, unsigned int num_lines)
 {
 	int ret;
@@ -602,7 +554,7 @@ void gpio_send_vga_gain_db(float gain_db)
         if (code_hg > 127.0f)
             code_hg = 127.0f;
         final_code = (uint8_t)code_hg;
-        final_code |= 0x80;//Activeate high gain
+        final_code |= 0x80;//Use high gain
     }
     else
     {

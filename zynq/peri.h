@@ -21,9 +21,12 @@
 //Width of the acumulator in bits - waterfall
 #define RX_WF_DDS_RESOLUTION        32 //bits
 
-#define SOUND_CIC1_DECIM        119
+// "overlapped_sampling" is no implemented in HW now
+#define USE_WF_OVERLAP_SAMPLING     false
+
+#define SOUND_CIC1_DECIM        238
 #define SOUND_CIC2_DECIM        14
-#define SOUND_DECIM             (SOUND_CIC1_DECIM * SOUND_CIC2_DECIM * 2) //2 - trick with no compensation filter in kiwi
+#define SOUND_DECIM             (SOUND_CIC1_DECIM * SOUND_CIC2_DECIM)
 
 
 void peri_init();

@@ -165,7 +165,8 @@ void cfg_reload() {
     cfg_test();
 #endif
 
-    int serno = eeprom_check();
+    //int serno = eeprom_check();
+    int serno = 0;
     if ((serial_number = cfg_int("serial_number", NULL, CFG_OPTIONAL)) > 0) {
         lprintf("serial number override from configuration: %d\n", serial_number);
     }

@@ -266,7 +266,7 @@ int main(int argc, char* argv[]) {
         if (err) kiwi.ext_clk = false;
 
         net.dna = fpga_dna();
-        printf("device DNA %08x|%08x\n", PRINTF_U64_ARG(net.dna));
+        //printf("device DNA %08x|%08x\n", PRINTF_U64_ARG(net.dna));
     }
 
     rx_server_init();
