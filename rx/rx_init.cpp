@@ -133,7 +133,7 @@ float max_thr;
 int n_camp;
 bool log_local_ip, DRM_enable, admin_keepalive, any_preempt_autorun;
 
-#define DC_OFFSET_DEFAULT       -0.02F
+#define DC_OFFSET_DEFAULT       0.00F
 #define DC_OFFSET_DEFAULT_PREV  0.05F
 #define DC_OFFSET_DEFAULT_20kHz -0.034F
 TYPEREAL DC_offset_I, DC_offset_Q;

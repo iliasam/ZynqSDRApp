@@ -1832,6 +1832,10 @@ bool rx_common_cmd(int stream_type, conn_t* conn, char* cmd) {
                                utc_s, local_s, tzone_id, tzone_name);
 
             send_msg(conn, false, "MSG stats_cb=%s", kstr_sp(sb));
+            
+            //Just for displaying "Selected ADC clock offset"
+            send_msg(conn, SM_SND_DEBUG, "MSG adc_clk_nom=%.0f", ADC_CLOCK_NOM);
+
             // printf("MSG stats_cb=<%s>\n", kstr_sp(sb));
             kstr_free(sb);
             return true;

@@ -68,6 +68,7 @@ function status_html()
          w3_div('id-msg-config w3-container') +
          w3_div('id-msg-debian w3-container') +
          //w3_div('id-msg-gps w3-container') +
+         w3_div('id-msg-adc w3-container') +
          w3_div('id-msg-snr w3-container') +
          w3_div('w3-container', 'Browser: '+ navigator.userAgent) +
          '<hr>' +

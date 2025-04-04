@@ -3105,6 +3105,18 @@ function kiwi_msg(param, ws)
                w3_innerHTML('id-rx-snr', ', SNR ', o.sa, ':', o.sh, ' dB');
                w3_innerHTML('id-msg-snr', 'SNR: All ', o.sa, ' dB, HF ', o.sh, ' dB');
 				}
+            
+            var kiwi_adc_str = '';
+            if (ext_adc_clock_nom_Hz() == 0)
+            {
+               kiwi_adc_str = 'Selected ADC clock offset: Not available';
+            }
+            else
+            {
+               var ppm = (ext_adc_clock_Hz() / ext_adc_clock_nom_Hz() - 1) * 1e6;
+               kiwi_adc_str = 'Selected ADC clock offset: ' + ppm.toFixed(1) + ' ppm';
+            }
+				w3_innerHTML('id-msg-adc', kiwi_adc_str);
 
 				admin_stats_cb(o.ad, o.au, o.ae, o.ar, o.an, o.ap, o.an2, o.ai);
 				w3_call('config_status_cb', o);
