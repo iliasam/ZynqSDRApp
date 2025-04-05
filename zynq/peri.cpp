@@ -1,3 +1,7 @@
+// This part part of the code is used for for communicating with driver (PL -> PS)
+// and simple GPIO operations
+// SPI is used for controlling FPGA (PL) modules
+
 #include "types.h"
 #include "config.h"
 #include "kiwi.h"
@@ -46,10 +50,12 @@
 #define AMP_CLK_MIO             29
 #define AMP_DATA_MIO            30
 
+#define LED1_MIO                15
+
 // Values for SDRDMA driver
-#define RX_READ_BAD_SIZE	10
-#define RX_READ_NO_DATA		11
-#define RX_READ_OK			20
+#define RX_READ_BAD_SIZE	    10
+#define RX_READ_NO_DATA		    11
+#define RX_READ_OK			    20
 
 // AD8370
 #define GPIO_VGA_NUM_LINES      3
@@ -68,16 +74,11 @@
 
 static bool init;
 
-static const uint8_t buss_id = 0;
-static const uint8_t chip_addr = 0x60;
-
 static uint32_t SPI_SPEED = 5000000;
 static uint8_t SPI_BITS = 8;//per word
 
-
-static int sdrdma_fd;
-
-static int sdr_spi_fd;
+static int sdrdma_fd;//SDRDMA Driver
+static int sdr_spi_fd;//SPI Driver
 
 static sem_t wf_sem;
 static std::atomic<int> wf_using[4];
@@ -91,14 +92,11 @@ typedef struct
 
 waterfall_state_t wf_buf[MAX_WF_CHANNELS];
 
-/*
-struct iq2_t {
-    s2_t i, q;
-} __attribute__((packed));
-*/
-
 /// @brief Used for Amp gain controlling, GPIOD library v1.6.x
-struct gpiod_line_bulk gpio_lines;
+struct gpiod_line_bulk amp_gpio_lines;
+
+struct gpiod_line *led_line = NULL;
+
 /// @brief Used for Amp gain controlling
 struct gpiod_chip *gpio_chip;
 
@@ -121,10 +119,8 @@ void peri_init() {
         int_clk = 1;
     }
 
-    bool use_13ch = (kiwi.airband) || (ADC_CLOCK_NOM < 100.0 * MHz);
-
     // load fpga bitstream
-    //int status = blocking_system("cat /media/mmcblk0p1/websdr_%s.bit > /dev/xdevcfg", use_13ch ? "vhf" : "hf");
+    //int status = blocking_system("cat /media/mmcblk0p1/websdr_%s.bit > /dev/xdevcfg", "hf");
 
     scall("/dev/spidev0.0", sdr_spi_fd = open("/dev/spidev0.0", O_RDWR));
 
@@ -171,7 +167,8 @@ void rf_enable_airband(bool enabled) {
 void peri_free() {
     assert(init);
 
-    gpiod_line_release_bulk(&gpio_lines);
+    gpiod_line_release(led_line);
+    gpiod_line_release_bulk(&amp_gpio_lines);
     gpiod_chip_close(gpio_chip);
 
     close(sdrdma_fd);
@@ -298,7 +295,6 @@ int fpga_set_antenna(int mask) {
         lprintf("Set GPIO failed");
     */
 
-
     return 0;
 }
 
@@ -313,6 +309,11 @@ int fpga_set_dither(bool enabled) {
 }
 
 int fpga_set_led(bool enabled) {
+
+    int val = enabled ? 0 : 1;//1 -> LED is OFF
+
+    if (led_line)
+        gpiod_line_set_value(led_line, val);
     return 0;
 }
 
@@ -322,7 +323,7 @@ void fpga_setovmask(uint32_t mask) {
 void fpga_setadclvl(uint32_t val) {
 }
 
-//WATERFALL *********************************************
+// WATERFALL *********************************************
 
 /// @brief Start WF channel read
 /// @param wf_chan 
@@ -505,28 +506,55 @@ int request_output_lines(const char *chip_path, unsigned int *offsets, unsigned 
 	if (!gpio_chip)
 		return -1;
     
-    ret = gpiod_chip_get_lines(gpio_chip, offsets, GPIO_VGA_NUM_LINES, &gpio_lines);
+    ret = gpiod_chip_get_lines(gpio_chip, offsets, GPIO_VGA_NUM_LINES, &amp_gpio_lines);
     if(ret)
     {
-        fprintf(stderr, "gpiod_chip_get_lines FAIL\n");
+        printf("gpiod_chip_get_lines FAIL\n");
         ret = -1;
         goto clear_lines;
     }
     
-    ret = gpiod_line_request_bulk_output(&gpio_lines,"gpio_test", NULL);
+    ret = gpiod_line_request_bulk_output(&amp_gpio_lines,"amp_gpio", NULL);
     if (ret)
     {
-        fprintf(stderr, "gpiod_line_request_bulk FAIL\n");
+        printf("gpiod_line_request_bulk FAIL\n");
         ret = -1;
         goto clear_lines;
     }
-    
-    fprintf(stderr, "GPIO Request bulk OK\n");
+
+    printf("GPIO Request bulk OK\n");
+
+    led_line = gpiod_chip_get_line(gpio_chip, LED1_MIO);
+    if (!led_line) 
+    {
+        led_line = NULL;
+    }
+
+    if (led_line)
+    {
+        ret = gpiod_line_request_output(led_line, "led1_gpio", 0);
+        if (ret < 0)
+        {
+            printf("Request line as output failed\n");
+            led_line = NULL;
+        }
+    }
+    else
+    {
+        printf("Can't init LED line\n");
+    }
+
+    if (led_line)
+        gpiod_line_set_value(led_line, 1);//1 -> LED is OFF
+    else
+        printf("Can't init LED\n");
+
+
     return 1;
 
 
 clear_lines:
-    gpiod_line_release_bulk(&gpio_lines);
+    gpiod_line_release_bulk(&amp_gpio_lines);
 	gpiod_chip_close(gpio_chip);
 
 	return ret;
@@ -575,23 +603,23 @@ void gpio_send_vga_gain_code(uint8_t code)
     
     int values[GPIO_VGA_NUM_LINES] = { 0, 0, 0 };//latch, clock, data
     //Bulk operations are slower, but I can't run "gpiod_line_bulk_get_line" well.
-    gpiod_line_set_value_bulk(&gpio_lines, values);
+    gpiod_line_set_value_bulk(&amp_gpio_lines, values);
     
 	for(i = 8; i > 0; i--)
 	{
 		data_bit = (code & 0x80) != 0;
         
         values[GPIO_VGA_DATA_OFFSET] = data_bit;
-        gpiod_line_set_value_bulk(&gpio_lines, values);
+        gpiod_line_set_value_bulk(&amp_gpio_lines, values);
         
         values[GPIO_VGA_CLK_OFFSET] = 1;
-        gpiod_line_set_value_bulk(&gpio_lines, values);
+        gpiod_line_set_value_bulk(&amp_gpio_lines, values);
 		code = code << 1;
         values[GPIO_VGA_CLK_OFFSET] = 0;
-        gpiod_line_set_value_bulk(&gpio_lines, values);
+        gpiod_line_set_value_bulk(&amp_gpio_lines, values);
 	}
     values[GPIO_VGA_LTCH_OFFSET] = 1;
-    gpiod_line_set_value_bulk(&gpio_lines, values);
+    gpiod_line_set_value_bulk(&amp_gpio_lines, values);
     values[GPIO_VGA_DATA_OFFSET] = 0;
-    gpiod_line_set_value_bulk(&gpio_lines, values);
+    gpiod_line_set_value_bulk(&amp_gpio_lines, values);
 }

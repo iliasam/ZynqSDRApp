@@ -150,10 +150,24 @@ static void led_num(int n, int ndigits, int flags) {
 // 0:'brighest', 1:'medium', 2:'dimmer', 3:'dimmest', 4:'off'
 static int pwm_off_time_ms[] = { 0, 5, 10, 20, -1 }; // 0 = full brightness (no PWM), -1 = no LEDs at all
 
+void led_task(void* param) 
+{
+    printf("Starting LED Task\n");
+
+    while (1) {
+        fpga_set_led(1);
+        kiwi_msleep(200);
+        fpga_set_led(0);
+        kiwi_msleep(800);
+    }
+}
+
+/*
 void led_task(void* param) {
     bool error;
     int ip_error;
     u1_t a, b, c, d;
+
 
     while (1) {
 
@@ -203,3 +217,4 @@ void led_task(void* param) {
         led_set(0, 0, 0, 0, 3000);
     }
 }
+*/
