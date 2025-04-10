@@ -1175,9 +1175,9 @@ int SNR_calc(SNR_meas_t* meas, int meas_type, int f_lo, int f_hi) {
             }
         }
 
-        printf("SNR_calc-%d: [%d,%d] noise(50%%)=%d signal(95%%)=%d snr=%d range=%d|%d\n",
+        printf("SNR_calc-%d: [%d,%d] noise(50%%)=%d signal(95%%)=%d snr=%d range=%d|%d freq=%d-%d kHz\n",
                meas_type, data->min, data->max, data->pct_50, data->pct_95,
-               data->snr, data->pct_95 - data->min, data->max - data->min);
+               data->snr, data->pct_95 - data->min, data->max - data->min, f_lo, f_hi);
     }
 
     return rv;
