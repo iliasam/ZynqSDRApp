@@ -35,9 +35,9 @@ MODULE_DESCRIPTION
 #define DRIVER_NAME_WF "sdrdma"
 #define DIVER_DTS_DEVICE "openzynqsdr"
 
-#define SOUND_BUFFER_LENGTH		200 //bursts
-#define SOUND_CH_COUNT	        8
-#define SOUND_BURST_SIZE 	    (SOUND_CH_COUNT * 2) //I+Q, size is 4byte words
+#define SOUND_BUFFER_LENGTH     200 //bursts
+#define SOUND_CH_COUNT          8
+#define SOUND_BURST_SIZE        (SOUND_CH_COUNT * 2) //I+Q, size is 4byte words
 #define SOUND_BUFFER_SIZE_WORDS (SOUND_BURST_SIZE * SOUND_BUFFER_LENGTH)
 #define SOUND_BUFFER_SIZE_BYTES (SOUND_BUFFER_SIZE_WORDS * sizeof(uint32_t))
 
@@ -45,23 +45,23 @@ MODULE_DESCRIPTION
 
 //Waterfall
 #define WF_BUFFER_SIZE_WORDS    (8192) //I+Q, size is 4byte words
-#define WF_BUFFER_SIZE_BYTES 	(WF_BUFFER_SIZE_WORDS * sizeof(uint32_t))
+#define WF_BUFFER_SIZE_BYTES    (WF_BUFFER_SIZE_WORDS * sizeof(uint32_t))
 
 
-#define SOUND_STATE_WORD_OFFSET	(0x1F400000)//DMA state address = 500MByte, sound data follow next
-#define WF0_STATE_WORD_OFFSET	(0x1F410000)
-#define WF1_STATE_WORD_OFFSET	(0x1F420000)
+#define SOUND_STATE_WORD_OFFSET (0x1F400000)//DMA state address = 500MByte, sound data follow next
+#define WF0_STATE_WORD_OFFSET   (0x1F410000)
+#define WF1_STATE_WORD_OFFSET   (0x1F420000)
 
 
-#define RX_READ_BAD_SIZE	10
-#define RX_READ_NO_DATA		11
-#define RX_READ_OK			20
+#define RX_READ_BAD_SIZE    10
+#define RX_READ_NO_DATA     11
+#define RX_READ_OK          20
 
 struct sdrdma_local {
-	int sound_irq_n;
-	int wf0_irq_n;
-	int wf1_irq_n;
-	uint8_t last_sound_dma_buf;//last filled
+    int sound_irq_n;
+    int wf0_irq_n;
+    int wf1_irq_n;
+    uint8_t last_sound_dma_buf;//last filled
     uint32_t *sound_dma_fast_buf0;
     uint32_t *sound_dma_fast_buf1;
     
@@ -111,7 +111,7 @@ static uint32_t wf0_tmp_buf[WF_BUFFER_SIZE_WORDS];
 static uint32_t wf1_tmp_buf[WF_BUFFER_SIZE_WORDS];
 
 
-static int 		init_sys_device(void *lp_p);
+static int         init_sys_device(void *lp_p);
 
 static int      etx_open(struct inode *inode, struct file *file);
 static int      etx_release(struct inode *inode, struct file *file);
@@ -121,12 +121,12 @@ static long     etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 
 static struct file_operations fops =
 {
-	.owner          = THIS_MODULE,
-	.read           = etx_read,
-	.write          = etx_write,
-	.open           = etx_open,
-	.unlocked_ioctl = etx_ioctl,
-	.release        = etx_release,
+    owner          = THIS_MODULE,
+    read           = etx_read,
+    write          = etx_write,
+    open           = etx_open,
+    unlocked_ioctl = etx_ioctl,
+    release        = etx_release,
 };
 //##########################################################################
 
@@ -135,180 +135,172 @@ static struct file_operations fops =
 
 static int etx_open(struct inode *inode, struct file *file)
 {
-	return 0;
+    return 0;
 }
 
 static int etx_release(struct inode *inode, struct file *file)
 {
-	return 0;
+    return 0;
 }
 
 static ssize_t etx_read(struct file *filp, char __user *buf, size_t len, loff_t *off)
 {
-	return 0;
+    return 0;
 }
 
 
 static ssize_t etx_write(struct file *filp, const char __user *buf, size_t len, loff_t *off)
 {
-	return len;
+    return len;
 }
 
 static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	int32_t value = 0;
-	struct rx_read_op tmp_sound_struct;
-	struct wf_read_op tmp_wf_struct;
-	static uint32_t tmp_counter = 0;
-	int i;
-	
-	tmp_counter++;
-	
-	
-	switch(cmd) 
-	{
-	case RX_READ:
-		// void * to, const void __user * from, unsigned long n
-		if( copy_from_user(&tmp_sound_struct ,(struct rx_read_op *) arg, sizeof(struct rx_read_op)) )
-      	{
-     		pr_err("RX_READ copy from err\n");
-      	}
-      	
-      	if (tmp_sound_struct.length != SOUND_BUFFER_SIZE_BYTES)
-      	{
-      		tmp_sound_struct.result = RX_READ_BAD_SIZE;
-      	}
-      	else
-      	{
-      		mutex_lock(&sound_fifo_mutex);
+    int32_t value = 0;
+    struct rx_read_op tmp_sound_struct;
+    struct wf_read_op tmp_wf_struct;
+    static uint32_t tmp_counter = 0;
+    int i;
 
-      		if (sound_fifo.amount == 0)
-      		{
-      			tmp_sound_struct.result = RX_READ_NO_DATA;
-      		}
-      		else
-      		{
-      		  	//if (tmp_counter < 10)
-      			//{
-      			//	printk(KERN_INFO "fifo get\n");
-      			//}
-      			sfifo_get(&sound_fifo, (void *)sound_tmp_buf);
-      			tmp_sound_struct.result = RX_READ_OK;
-      		}
-      		
-      		mutex_unlock(&sound_fifo_mutex);
-      	}
-      	
-		//void __user * to, const void * from, unsigned long n
-		if( copy_to_user((struct rx_read_op *)arg, &tmp_sound_struct, sizeof(struct rx_read_op)) )
-		{
-       		pr_err("RX_READ copy to err\n");
-     	}
-     	
-     	
-     	if (tmp_sound_struct.result == RX_READ_OK)
-     	{
-     		//if (tmp_counter < 10)
-      		//{
-      		//	printk(KERN_INFO "try to copy\n");
-      		//}
-      			
-      		//void __user * to, const void * from, unsigned long n
-     		if( copy_to_user((void *)tmp_sound_struct.destination, sound_tmp_buf, sizeof(sound_tmp_buf)) )
-			{
-       			pr_err("RX_READ copy to err2\n");
-     		}
-     	}
-     	
-	break;
-    	
-    	
-    	
-	case WF_READ:
-		// void * to, const void __user * from, unsigned long n
-		if( copy_from_user(&tmp_wf_struct, (struct wf_read_op *) arg, sizeof(struct wf_read_op)) )
-      	{
-     		pr_err("RX_READ copy from err\n");
-      	}
-      	
-      	uint16_t wf_chanel = tmp_wf_struct.channel;
-      	
-      	if (tmp_wf_struct.length != WF_BUFFER_SIZE_BYTES)
-      	{
-      		tmp_wf_struct.result = RX_READ_BAD_SIZE;
-      	}
-      	else if (wf_chanel > 1)
-      	{
-      		tmp_wf_struct.result = RX_READ_BAD_SIZE;
-      	}
-      	else
-      	{
-      		if (wf_chanel == 0)
-      		{
-      			if (global_drv_state_p->wf0_data_ready == false)
-      			{
-      				tmp_wf_struct.result = RX_READ_NO_DATA;
-      			}
-      			else
-      			{
-					memcpy((void *)wf0_tmp_buf, global_drv_state_p->wf0_dma_fast_buf0, WF_BUFFER_SIZE_BYTES);
-      				tmp_wf_struct.result = RX_READ_OK;
-      				global_drv_state_p->wf0_data_ready = false;
-      			}
-      		}
-      		else if (wf_chanel == 1)
-      		{
-      			if (global_drv_state_p->wf1_data_ready == false)
-      			{
-      				tmp_wf_struct.result = RX_READ_NO_DATA;
-      			}
-      			else
-      			{
-					memcpy((void *)wf1_tmp_buf, global_drv_state_p->wf1_dma_fast_buf0, WF_BUFFER_SIZE_BYTES);
-      				tmp_wf_struct.result = RX_READ_OK;
-      				global_drv_state_p->wf1_data_ready = false;
-      			}
-      		}
+    tmp_counter++;
 
-      	}
-      	
-		//void __user * to, const void * from, unsigned long n
-		if( copy_to_user((struct wf_read_op *)arg, &tmp_wf_struct, sizeof(struct wf_read_op)) )
-		{
-       		pr_err("WF RX_READ copy to err\n");
-     	}
-     	
-     	
-     	if (tmp_wf_struct.result == RX_READ_OK)
-     	{
-     		if (wf_chanel == 0)
-     		{
-     			//void __user * to, const void * from, unsigned long n
-     			if( copy_to_user((void *)tmp_wf_struct.destination, wf0_tmp_buf, sizeof(wf0_tmp_buf)) )
-				{
-       				pr_err("WF RX_READ copy to err2\n");
-     			}
-     		}
-     		else if (wf_chanel == 1)
-     		{
-     			//void __user * to, const void * from, unsigned long n
-     			if( copy_to_user((void *)tmp_wf_struct.destination, wf1_tmp_buf, sizeof(wf1_tmp_buf)) )
-				{
-       				pr_err("WF RX_READ copy to err2\n");
-     			}
-     		}
-     	}
-     	
-	break;
-    	
-    	
-	default:
-		pr_info("Default\n");
-		break;
-	}
-	return 0;
+    switch (cmd)
+    {
+    case RX_READ:
+        // void * to, const void __user * from, unsigned long n
+        if (copy_from_user(&tmp_sound_struct, (struct rx_read_op *)arg, sizeof(struct rx_read_op)))
+        {
+            pr_err("RX_READ copy from err\n");
+        }
+
+        if (tmp_sound_struct.length != SOUND_BUFFER_SIZE_BYTES)
+        {
+            tmp_sound_struct.result = RX_READ_BAD_SIZE;
+        }
+        else
+        {
+            mutex_lock(&sound_fifo_mutex);
+
+            if (sound_fifo.amount == 0)
+            {
+                tmp_sound_struct.result = RX_READ_NO_DATA;
+            }
+            else
+            {
+                // if (tmp_counter < 10)
+                //{
+                //    printk(KERN_INFO "fifo get\n");
+                //}
+                sfifo_get(&sound_fifo, (void *)sound_tmp_buf);
+                tmp_sound_struct.result = RX_READ_OK;
+            }
+
+            mutex_unlock(&sound_fifo_mutex);
+        }
+
+        // void __user * to, const void * from, unsigned long n
+        if (copy_to_user((struct rx_read_op *)arg, &tmp_sound_struct, sizeof(struct rx_read_op)))
+        {
+            pr_err("RX_READ copy to err\n");
+        }
+
+        if (tmp_sound_struct.result == RX_READ_OK)
+        {
+            // if (tmp_counter < 10)
+            //{
+            //     printk(KERN_INFO "try to copy\n");
+            // }
+
+            // void __user * to, const void * from, unsigned long n
+            if (copy_to_user((void *)tmp_sound_struct.destination, sound_tmp_buf, sizeof(sound_tmp_buf)))
+            {
+                pr_err("RX_READ copy to err2\n");
+            }
+        }
+
+        break;
+
+    case WF_READ:
+        // void * to, const void __user * from, unsigned long n
+        if (copy_from_user(&tmp_wf_struct, (struct wf_read_op *)arg, sizeof(struct wf_read_op)))
+        {
+            pr_err("RX_READ copy from err\n");
+        }
+
+        uint16_t wf_chanel = tmp_wf_struct.channel;
+
+        if (tmp_wf_struct.length != WF_BUFFER_SIZE_BYTES)
+        {
+            tmp_wf_struct.result = RX_READ_BAD_SIZE;
+        }
+        else if (wf_chanel > 1)
+        {
+            tmp_wf_struct.result = RX_READ_BAD_SIZE;
+        }
+        else
+        {
+            if (wf_chanel == 0)
+            {
+                if (global_drv_state_p->wf0_data_ready == false)
+                {
+                    tmp_wf_struct.result = RX_READ_NO_DATA;
+                }
+                else
+                {
+                    memcpy((void *)wf0_tmp_buf, global_drv_state_p->wf0_dma_fast_buf0, WF_BUFFER_SIZE_BYTES);
+                    tmp_wf_struct.result = RX_READ_OK;
+                    global_drv_state_p->wf0_data_ready = false;
+                }
+            }
+            else if (wf_chanel == 1)
+            {
+                if (global_drv_state_p->wf1_data_ready == false)
+                {
+                    tmp_wf_struct.result = RX_READ_NO_DATA;
+                }
+                else
+                {
+                    memcpy((void *)wf1_tmp_buf, global_drv_state_p->wf1_dma_fast_buf0, WF_BUFFER_SIZE_BYTES);
+                    tmp_wf_struct.result = RX_READ_OK;
+                    global_drv_state_p->wf1_data_ready = false;
+                }
+            }
+        }
+
+        // void __user * to, const void * from, unsigned long n
+        if (copy_to_user((struct wf_read_op *)arg, &tmp_wf_struct, sizeof(struct wf_read_op)))
+        {
+            pr_err("WF RX_READ copy to err\n");
+        }
+
+        if (tmp_wf_struct.result == RX_READ_OK)
+        {
+            if (wf_chanel == 0)
+            {
+                // void __user * to, const void * from, unsigned long n
+                if (copy_to_user((void *)tmp_wf_struct.destination, wf0_tmp_buf, sizeof(wf0_tmp_buf)))
+                {
+                    pr_err("WF RX_READ copy to err2\n");
+                }
+            }
+            else if (wf_chanel == 1)
+            {
+                // void __user * to, const void * from, unsigned long n
+                if (copy_to_user((void *)tmp_wf_struct.destination, wf1_tmp_buf, sizeof(wf1_tmp_buf)))
+                {
+                    pr_err("WF RX_READ copy to err2\n");
+                }
+            }
+        }
+
+        break;
+
+    default:
+        pr_info("Default\n");
+        break;
+    }
+    return 0;
 }
-
 
 //*********************************************************************
 
@@ -321,161 +313,160 @@ DECLARE_WORK(workqueue, sound_workqueue_fn);
 /*Workqueue Function*/
 void sound_workqueue_fn(struct work_struct *work)
 {
-	if (global_drv_state_p == NULL)
-		return;
-	
-	
-	mutex_lock(&sound_fifo_mutex);
-	if (global_drv_state_p->last_sound_dma_buf == 0)
-	{
-		sfifo_put(&sound_fifo, (void *)global_drv_state_p->sound_dma_fast_buf0);
-	}
-	else
-	{
-		sfifo_put(&sound_fifo, (void *)global_drv_state_p->sound_dma_fast_buf1);
-	}
-	mutex_unlock(&sound_fifo_mutex);
-	
-	//Test
-	//if (global_drv_state_p->test_cnt >= 20)
-	//	return;
-	//uint32_t fifo_amount = sound_fifo.amount;
-	//printk(KERN_INFO "work idx %d, fifo=%d\n", global_drv_state_p->last_sound_dma_buf, fifo_amount);
-}
+    if (global_drv_state_p == NULL)
+        return;
 
+    mutex_lock(&sound_fifo_mutex);
+    if (global_drv_state_p->last_sound_dma_buf == 0)
+    {
+        sfifo_put(&sound_fifo, (void *)global_drv_state_p->sound_dma_fast_buf0);
+    }
+    else
+    {
+        sfifo_put(&sound_fifo, (void *)global_drv_state_p->sound_dma_fast_buf1);
+    }
+    mutex_unlock(&sound_fifo_mutex);
+
+    // Test
+    // if (global_drv_state_p->test_cnt >= 20)
+    //     return;
+    // uint32_t fifo_amount = sound_fifo.amount;
+    // printk(KERN_INFO "work idx %d, fifo=%d\n", global_drv_state_p->last_sound_dma_buf, fifo_amount);
+}
 
 static irqreturn_t sdrdma_sound_irq_handler(int irq, void *lp_p)
 {
-	struct sdrdma_local *lp = lp_p;
-	uint32_t dma_state;
-	
+    struct sdrdma_local *lp = lp_p;
+    uint32_t dma_state;
+
     if (lp->is_init == 0)
     {
         return IRQ_HANDLED;
     }
 
-	dma_state = ioread32(lp->sound_virtual_base);//number of the buffer that is filled and ready now
-    	
+    dma_state = ioread32(lp->sound_virtual_base); // number of the buffer that is filled and ready now
+
     if (dma_state == 0)
-	{
-   		memcpy_fromio(lp->sound_dma_fast_buf0, lp->sound_virtual_base + 1, SOUND_BUFFER_SIZE_BYTES); // +1 - skip one 32-bit status register
-	}
-	else
-  	{
-		memcpy_fromio(lp->sound_dma_fast_buf1, lp->sound_virtual_base + 1 + SOUND_BUFFER_SIZE_WORDS, SOUND_BUFFER_SIZE_BYTES);
+    {
+        memcpy_fromio(lp->sound_dma_fast_buf0, lp->sound_virtual_base + 1, SOUND_BUFFER_SIZE_BYTES); // +1 - skip one 32-bit status register
+    }
+    else
+    {
+        memcpy_fromio(lp->sound_dma_fast_buf1, lp->sound_virtual_base + 1 + SOUND_BUFFER_SIZE_WORDS, SOUND_BUFFER_SIZE_BYTES);
     }
     lp->last_sound_dma_buf = dma_state;
-    
-	schedule_work(&workqueue);
 
-    //if (lp->test_cnt < 20)
+    schedule_work(&workqueue);
+
+    // if (lp->test_cnt < 20)
     //{
-    //	lp->test_cnt++;
-    //	printk("sdrdma irq: %d\n", dma_state);
-    //}
-    
-    
-	return IRQ_HANDLED;
+    //     lp->test_cnt++;
+    //     printk("sdrdma irq: %d\n", dma_state);
+    // }
+
+    return IRQ_HANDLED;
 }
 
 static irqreturn_t sdrdma_wf0_irq_handler(int irq, void *lp_p)
 {
-	struct sdrdma_local *lp = lp_p;
-	
-	if (lp->is_init == 0)
+    struct sdrdma_local *lp = lp_p;
+
+    if (lp->is_init == 0)
     {
         return IRQ_HANDLED;
     }
-	
-	if (lp->wf0_data_ready == false)
-	{
-		memcpy_fromio(lp->wf0_dma_fast_buf0, lp->wf0_virtual_base + 2, WF_BUFFER_SIZE_BYTES); // +2 - skip one 64-bit status register
-		lp->wf0_data_ready = true;
-	}
-	
-	//if (lp->test_cnt_wf0 < 20)
+
+    if (lp->wf0_data_ready == false)
+    {
+        memcpy_fromio(lp->wf0_dma_fast_buf0, lp->wf0_virtual_base + 2, WF_BUFFER_SIZE_BYTES); // +2 - skip one 64-bit status register
+        lp->wf0_data_ready = true;
+    }
+
+    // if (lp->test_cnt_wf0 < 20)
     //{
-    //	lp->test_cnt_wf0++;
-    //	printk("sdrdma wf0 irq: %d\n", 0);
-    //}
-    
-	return IRQ_HANDLED;
+    //     lp->test_cnt_wf0++;
+    //     printk("sdrdma wf0 irq: %d\n", 0);
+    // }
+
+    return IRQ_HANDLED;
 }
 
 static irqreturn_t sdrdma_wf1_irq_handler(int irq, void *lp_p)
 {
-	struct sdrdma_local *lp = lp_p;
-	
-	if (lp->is_init == 0)
+    struct sdrdma_local *lp = lp_p;
+
+    if (lp->is_init == 0)
     {
         return IRQ_HANDLED;
     }
-	
-	if (lp->wf1_data_ready == false)
-	{
-		memcpy_fromio(lp->wf1_dma_fast_buf0, lp->wf1_virtual_base + 2, WF_BUFFER_SIZE_BYTES); // +2 - skip one 64-bit status register
-		lp->wf1_data_ready = true;
-	}
-	
-	return IRQ_HANDLED;
+
+    if (lp->wf1_data_ready == false)
+    {
+        memcpy_fromio(lp->wf1_dma_fast_buf0, lp->wf1_virtual_base + 2, WF_BUFFER_SIZE_BYTES); // +2 - skip one 64-bit status register
+        lp->wf1_data_ready = true;
+    }
+
+    return IRQ_HANDLED;
 }
 
 //Used to set new device permissions
 static char *devnode(struct device *dev, umode_t *mode)
 {
-	if (!mode)
-		return NULL;
-	if (dev->devt == global_drv_state_p->sdrdma_dev)
-	{
-		printk("Change dev mode to 0666\n");
-		*mode = 0666;
-	}
-	return NULL;
+    if (!mode)
+        return NULL;
+    if (dev->devt == global_drv_state_p->sdrdma_dev)
+    {
+        printk("Change dev mode to 0666\n");
+        *mode = 0666;
+    }
+    return NULL;
 }
 
 static int init_sys_device(void *lp_p)
 {
-	struct sdrdma_local *lp = lp_p;
-	
-	/*Allocating Major number*/
-	if((alloc_chrdev_region(&lp->sdrdma_dev, 0, 1, "etx_Dev")) <0){
-		printk("Cannot allocate major number for device\n");
-		return -1;
-	}
-	printk("Major = %d Minor = %d \n",MAJOR(lp->sdrdma_dev), MINOR(lp->sdrdma_dev));
-	
-	cdev_init(&lp->etx_cdev, &fops);
-	
-	/*Adding character device to the system*/
-    if((cdev_add(&lp->etx_cdev, lp->sdrdma_dev, 1)) < 0){
-		pr_err("Cannot add the device to the system\n");
+    struct sdrdma_local *lp = lp_p;
+
+    /*Allocating Major number*/
+    if ((alloc_chrdev_region(&lp->sdrdma_dev, 0, 1, "etx_Dev")) < 0)
+    {
+        printk("Cannot allocate major number for device\n");
+        return -1;
+    }
+    printk("Major = %d Minor = %d \n", MAJOR(lp->sdrdma_dev), MINOR(lp->sdrdma_dev));
+
+    cdev_init(&lp->etx_cdev, &fops);
+
+    /*Adding character device to the system*/
+    if ((cdev_add(&lp->etx_cdev, lp->sdrdma_dev, 1)) < 0)
+    {
+        pr_err("Cannot add the device to the system\n");
         goto r_class;
     }
- 
-	/*Creating struct class*/
-	lp->dev_class = class_create(THIS_MODULE, "sdrdma_class");
-	if(IS_ERR(lp->dev_class)){
-		printk("Cannot create the struct class for device\n");
-		goto r_class;
-	}
-	lp->dev_class->devnode = devnode;
- 
-	/*Creating device*/
-	if(IS_ERR(device_create(lp->dev_class, NULL, lp->sdrdma_dev, NULL, DRIVER_NAME)))
-	{
-		printk("Cannot create the device class\n");
-		goto r_device;
-	}
-	printk("SDRDMA - Kernel Device created successfully.\n");
-	return 0;
- 
-r_device:
-	class_destroy(lp->dev_class);
-r_class:
-	unregister_chrdev_region(lp->sdrdma_dev, 1);
-	return -1;
-}
 
+    /*Creating struct class*/
+    lp->dev_class = class_create(THIS_MODULE, "sdrdma_class");
+    if (IS_ERR(lp->dev_class))
+    {
+        printk("Cannot create the struct class for device\n");
+        goto r_class;
+    }
+    lp->dev_class->devnode = devnode;
+
+    /*Creating device*/
+    if (IS_ERR(device_create(lp->dev_class, NULL, lp->sdrdma_dev, NULL, DRIVER_NAME)))
+    {
+        printk("Cannot create the device class\n");
+        goto r_device;
+    }
+    printk("SDRDMA - Kernel Device created successfully.\n");
+    return 0;
+
+r_device:
+    class_destroy(lp->dev_class);
+r_class:
+    unregister_chrdev_region(lp->sdrdma_dev, 1);
+    return -1;
+}
 
 static int sdrdma_probe(struct platform_device *pdev)
 {
@@ -487,218 +478,221 @@ static int sdrdma_probe(struct platform_device *pdev)
     int irq_n_wf0;
     int irq_n_wf1;
     int i;
- 
+
     printk("SDRDMA Driver probe\n");
-    res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);//GET SOUND IRQ
-    if (!res) {
-      printk(KERN_INFO "could not get platform IRQ resource.\n");
-      goto fail_irq;
+    res = platform_get_resource(pdev, IORESOURCE_IRQ, 0); // GET SOUND IRQ
+    if (!res)
+    {
+        printk(KERN_INFO "could not get platform IRQ resource.\n");
+        goto fail_irq;
     }
-   
+
     lp = (struct sdrdma_local *)kmalloc(sizeof(struct sdrdma_local), GFP_KERNEL);
-    if (!lp) {
-		printk("Can't not allocate memory for sdrdma device\n");
-		return -ENOMEM;
+    if (!lp)
+    {
+        printk("Can't not allocate memory for sdrdma device\n");
+        return -ENOMEM;
     }
     global_drv_state_p = lp;
     dev_set_drvdata(dev, lp);
- 
+
     // save the returned IRQ
     irq_n = res->start;
     lp->sound_irq_n = irq_n;
     lp->is_init = 0;
     printk(KERN_INFO "IRQ read form DTS entry as %d\n", irq_n);
- 
+
     rval = request_irq(irq_n, sdrdma_sound_irq_handler, 0, DRIVER_NAME, lp);
-    if(rval)
+    if (rval)
     {
         printk(KERN_INFO "Can't get assigned Sound irq: %d\n", irq_n);
         goto error1;
     }
-    
+
     //************
-    res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);//GET WF0 IRQ
-    if (!res) {
-      printk(KERN_INFO "could not get platform IRQ WF0 resource.\n");
-      goto error1_5;
+    res = platform_get_resource(pdev, IORESOURCE_IRQ, 1); // GET WF0 IRQ
+    if (!res)
+    {
+        printk(KERN_INFO "could not get platform IRQ WF0 resource.\n");
+        goto error1_5;
     }
     // save the returned IRQ
     irq_n_wf0 = res->start;
     lp->wf0_irq_n = irq_n_wf0;
     printk(KERN_INFO "IRQ read form DTS entry as %d\n", irq_n_wf0);
-    
-    
-    //irq_n_wf0 = irq_n + 1;
+
+    // irq_n_wf0 = irq_n + 1;
     rval = request_irq(irq_n_wf0, sdrdma_wf0_irq_handler, 0, DRIVER_NAME_WF, lp);
-    if(rval)
+    if (rval)
     {
         printk(KERN_INFO "Can't get assigned WF irq: %d\n", irq_n_wf0);
         goto error1_5;
     }
-    
+
     //*********
-    
-    res = platform_get_resource(pdev, IORESOURCE_IRQ, 2);//GET WF1 IRQ
-    if (!res) {
-      printk(KERN_INFO "could not get platform IRQ WF1 resource.\n");
-      goto error1_6;
+
+    res = platform_get_resource(pdev, IORESOURCE_IRQ, 2); // GET WF1 IRQ
+    if (!res)
+    {
+        printk(KERN_INFO "could not get platform IRQ WF1 resource.\n");
+        goto error1_6;
     }
     // save the returned IRQ
     irq_n_wf1 = res->start;
     lp->wf1_irq_n = irq_n_wf1;
     printk(KERN_INFO "IRQ read form DTS entry as %d\n", irq_n_wf1);
-    
+
     rval = request_irq(irq_n_wf1, sdrdma_wf1_irq_handler, 0, DRIVER_NAME_WF, lp);
-    if(rval)
+    if (rval)
     {
         printk(KERN_INFO "Can't get assigned WF irq: %d\n", irq_n_wf1);
         goto error1_6;
     }
-   
+
     lp->sound_dma_fast_buf0 = (uint32_t *)kmalloc(SOUND_BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
-    if (!lp->sound_dma_fast_buf0) {
-		printk("Can't not allocate memory for sdrdma device - fast0\n");
-		goto error1;
+    if (!lp->sound_dma_fast_buf0)
+    {
+        printk("Can't not allocate memory for sdrdma device - fast0\n");
+        goto error1;
     }
-    
+
     lp->sound_dma_fast_buf1 = (uint32_t *)kmalloc(SOUND_BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
-    if (!lp->sound_dma_fast_buf1) {
-		printk("Can't not allocate memory for sdrdma device - fast1\n");
+    if (!lp->sound_dma_fast_buf1)
+    {
+        printk("Can't not allocate memory for sdrdma device - fast1\n");
         kfree(lp->sound_dma_fast_buf0);
-		goto error1;
+        goto error1;
     }
-    
+
     lp->wf0_dma_fast_buf0 = (uint32_t *)kmalloc(WF_BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
-    if (!lp->wf0_dma_fast_buf0) {
-		printk("Can't not allocate memory for sdrdma device - wf0_0\n");
+    if (!lp->wf0_dma_fast_buf0)
+    {
+        printk("Can't not allocate memory for sdrdma device - wf0_0\n");
         kfree(lp->sound_dma_fast_buf0);
         kfree(lp->sound_dma_fast_buf1);
-		goto error1;
+        goto error1;
     }
-    
+
     lp->wf1_dma_fast_buf0 = (uint32_t *)kmalloc(WF_BUFFER_SIZE_WORDS * sizeof(uint32_t), GFP_ATOMIC);
-    if (!lp->wf1_dma_fast_buf0) {
-		printk("Can't not allocate memory for sdrdma device - wf0_0\n");
+    if (!lp->wf1_dma_fast_buf0)
+    {
+        printk("Can't not allocate memory for sdrdma device - wf0_0\n");
         kfree(lp->sound_dma_fast_buf0);
         kfree(lp->sound_dma_fast_buf1);
         kfree(lp->wf0_dma_fast_buf0);
-		goto error1;
+        goto error1;
     }
 
-    lp->sound_virtual_base = ioremap(SOUND_STATE_WORD_OFFSET, (SOUND_BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t));//include status reg
+    lp->sound_virtual_base = ioremap(SOUND_STATE_WORD_OFFSET, (SOUND_BUFFER_SIZE_WORDS * 2 + 1) * sizeof(uint32_t)); // include status reg
     if (!lp->sound_virtual_base)
     {
-    	printk("Can't remap memory for sdrdma device\n");
-    	goto error2;
+        printk("Can't remap memory for sdrdma device\n");
+        goto error2;
     }
     printk("Sound Virt Address 0x%08lx\n", *lp->sound_virtual_base);
-    
-    lp->wf0_virtual_base = ioremap(WF0_STATE_WORD_OFFSET, (WF_BUFFER_SIZE_WORDS + 2) * sizeof(uint32_t));//include status reg
+
+    lp->wf0_virtual_base = ioremap(WF0_STATE_WORD_OFFSET, (WF_BUFFER_SIZE_WORDS + 2) * sizeof(uint32_t)); // include status reg
     if (!lp->wf0_virtual_base)
     {
-    	printk("Can't remap memory for sdrdma device - WF0\n");
-    	goto error2;
+        printk("Can't remap memory for sdrdma device - WF0\n");
+        goto error2;
     }
     printk("WF0 Virt Address 0x%08lx\n", *lp->wf0_virtual_base);
-    
-    lp->wf1_virtual_base = ioremap(WF1_STATE_WORD_OFFSET, (WF_BUFFER_SIZE_WORDS + 2) * sizeof(uint32_t));//include status reg
+
+    lp->wf1_virtual_base = ioremap(WF1_STATE_WORD_OFFSET, (WF_BUFFER_SIZE_WORDS + 2) * sizeof(uint32_t)); // include status reg
     if (!lp->wf1_virtual_base)
     {
-    	printk("Can't remap memory for sdrdma device - WF1\n");
-    	goto error2;
+        printk("Can't remap memory for sdrdma device - WF1\n");
+        goto error2;
     }
     printk("WF1 Virt Address 0x%08lx\n", *lp->wf1_virtual_base);
-    
-    
-	rval = init_sys_device(lp);
-	if (rval < 0)
-		goto error2;
-    
+
+    rval = init_sys_device(lp);
+    if (rval < 0)
+        goto error2;
+
     lp->test_cnt = 0;
     lp->is_init = 1;
-    
+
     sfifo_init(&sound_fifo, (void *)sound_fifo_buf, SOUND_BUFFER_SIZE_BYTES, SOUND_FIFO_ITEMS);
 
-   return 0;
+    return 0;
 
 error2:
-	kfree(lp->sound_dma_fast_buf0);
-	kfree(lp->sound_dma_fast_buf1);
-	kfree(lp->wf0_dma_fast_buf0);
-	kfree(lp->wf1_dma_fast_buf0);
-error1_6:
-	free_irq(lp->wf0_irq_n, lp);
-	printk(KERN_ALERT "Error, IRQ removed, code %d", lp->wf0_irq_n);
-error1_5:
-	free_irq(lp->sound_irq_n, lp);
-	printk(KERN_ALERT "Error, IRQ removed, code %d", lp->sound_irq_n);
-error1:
-	kfree(lp);
-	dev_set_drvdata(dev, NULL);
- 
-fail_irq:
-   return -1;
-}
-
-
-
-static int sdrdma_remove(struct platform_device *pdev)
-{
-	printk(KERN_ALERT "Removing SDRDMA driver\n");
-	struct device *dev = &pdev->dev;
-	struct sdrdma_local *lp = dev_get_drvdata(dev);
-	free_irq(lp->sound_irq_n, lp);
-	printk(KERN_ALERT "IRQ removed, code %d", lp->sound_irq_n);
-	free_irq(lp->wf0_irq_n, lp);
-    printk(KERN_ALERT "WF0 IRQ removed, code %d", lp->wf0_irq_n);
-    free_irq(lp->wf1_irq_n, lp);
-    printk(KERN_ALERT "WF1 IRQ removed, code %d", lp->wf1_irq_n);
-    
     kfree(lp->sound_dma_fast_buf0);
     kfree(lp->sound_dma_fast_buf1);
     kfree(lp->wf0_dma_fast_buf0);
     kfree(lp->wf1_dma_fast_buf0);
-    
-    device_destroy(lp->dev_class, lp->sdrdma_dev);
-  	class_destroy(lp->dev_class);
-  	cdev_del(&lp->etx_cdev);
-    unregister_chrdev_region(lp->sdrdma_dev, 1);
+error1_6:
+    free_irq(lp->wf0_irq_n, lp);
+    printk(KERN_ALERT "Error, IRQ removed, code %d", lp->wf0_irq_n);
+error1_5:
+    free_irq(lp->sound_irq_n, lp);
+    printk(KERN_ALERT "Error, IRQ removed, code %d", lp->sound_irq_n);
+error1:
+    kfree(lp);
+    dev_set_drvdata(dev, NULL);
 
-	kfree(lp);
-	dev_set_drvdata(dev, NULL);
-	return 0;
+fail_irq:
+    return -1;
 }
 
+static int sdrdma_remove(struct platform_device *pdev)
+{
+    printk(KERN_ALERT "Removing SDRDMA driver\n");
+    struct device *dev = &pdev->dev;
+    struct sdrdma_local *lp = dev_get_drvdata(dev);
+    free_irq(lp->sound_irq_n, lp);
+    printk(KERN_ALERT "IRQ removed, code %d", lp->sound_irq_n);
+    free_irq(lp->wf0_irq_n, lp);
+    printk(KERN_ALERT "WF0 IRQ removed, code %d", lp->wf0_irq_n);
+    free_irq(lp->wf1_irq_n, lp);
+    printk(KERN_ALERT "WF1 IRQ removed, code %d", lp->wf1_irq_n);
+
+    kfree(lp->sound_dma_fast_buf0);
+    kfree(lp->sound_dma_fast_buf1);
+    kfree(lp->wf0_dma_fast_buf0);
+    kfree(lp->wf1_dma_fast_buf0);
+
+    device_destroy(lp->dev_class, lp->sdrdma_dev);
+    class_destroy(lp->dev_class);
+    cdev_del(&lp->etx_cdev);
+    unregister_chrdev_region(lp->sdrdma_dev, 1);
+
+    kfree(lp);
+    dev_set_drvdata(dev, NULL);
+    return 0;
+}
 
 static struct of_device_id sdrdma_of_match[] = {
-	{ .compatible = DIVER_DTS_DEVICE, },
-	{ /* end of list */ },
+    { .compatible = DIVER_DTS_DEVICE, },
+    { /* end of list */ },
 };
 MODULE_DEVICE_TABLE(of, sdrdma_of_match);
 
 
 static struct platform_driver sdrdma_driver = {
-	.driver = {
-		.name = DRIVER_NAME,
-		.owner = THIS_MODULE,
-		.of_match_table	= sdrdma_of_match,
-	},
-	.probe		= sdrdma_probe,
-	.remove		= sdrdma_remove,
+    .driver = {
+        .name = DRIVER_NAME,
+        .owner = THIS_MODULE,
+        .of_match_table    = sdrdma_of_match,
+    },
+    .probe        = sdrdma_probe,
+    .remove        = sdrdma_remove,
 };
 
 static int __init sdrdma_init(void)
 {
-	printk("Starting SDRDMA driver v11.\n");
+    printk("Starting SDRDMA driver v11.\n");
 
-	return platform_driver_register(&sdrdma_driver);
+    return platform_driver_register(&sdrdma_driver);
 }
 
 
 static void __exit sdrdma_exit(void)
 {
-	platform_driver_unregister(&sdrdma_driver);
-	printk(KERN_ALERT "SDRDMA driver done.\n");
+    platform_driver_unregister(&sdrdma_driver);
+    printk(KERN_ALERT "SDRDMA driver done.\n");
 }
 
 module_init(sdrdma_init);
