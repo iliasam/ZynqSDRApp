@@ -4,11 +4,11 @@ Under development.
 Linux Application of the OpenZynqSDR receiver.
 See: https://habr.com/ru/articles/898490
 
-**  Kernel module
+**Kernel module**  
 This App is receiving data from FPGA throw kernel module "sdrdma".  
 You can find its sources is the "kernel_dma_driver" folder.  
   
-** Needed dependencies:  
+**Needed dependencies:**  
 ```
 sudo apt install install build-essential make cmake  
 sudo apt install install pkgconf  
@@ -22,7 +22,7 @@ sudo apt install libconfig++-dev
 sudo apt install -y libgpiod-dev gpiod  
 ```
   
-** Building App:  
+**Building App:**  
 Execute from the application folder:  
 ```
 mkdir build
