@@ -1,14 +1,14 @@
 # OpenZynqSDRApp  
 Under development.
   
-Linux Application of the OpenZynqSDR receiver.  
+Linux Application of the OpenZynqSDR receiver - WEB SDR, based on "Antminer S9" board.  
 See this article (Russian): https://habr.com/ru/articles/898490  
 See also Zynq hardware description and FPGA sources: https://github.com/iliasam/OpenZynqSDR_HW  
-This code is forked from Web-888, which is forked from KiwiSDR project: https://github.com/RaspSDR/server  
+This code is forked from Web-888 project, which is forked from KiwiSDR project: https://github.com/RaspSDR/server and https://github.com/jks-prv/KiwiSDR  
 
 **Configuration files**  
 Application is need to have configuration files. They are placed at the "config" folder of this repo.  
-Path to the config folder at the target computer (where is the app is executed) is set at CMakeLists.txt:  
+Path to the config folder at the target computer (where is the App is executed) is set at CMakeLists.txt:  
 DIR_CFG="/home/ubuntu/sdr/config"  
 DIR_SAMPLES="/home/ubuntu/sdr/config/samples"  
   
@@ -30,7 +30,7 @@ sudo apt install libconfig++-dev
 sudo apt install -y libgpiod-dev gpiod  
 ```
   
-**Building App:**  
+**Building App at the target computer:**  
 Execute from the application folder:  
 ```
 mkdir build
@@ -38,6 +38,9 @@ cd build
 cmake ..
 cmake --build .
 ```
+
+SDR design:  
+<img src="https://github.com/iliasam/OpenZynqSDRApp/blob/develop/SDR_Design.png">  
 
 
 
