@@ -358,7 +358,7 @@ function kiwi_ask_pwd(conn_kiwi)
 	// "&& conn_kiwi" to ignore pathological "/admin?prot" etc.
    var prot = (kiwi_url_param(['p', 'prot', 'protected'], true, false) && conn_kiwi);
 	if (prot) s1 = 'You have requested a password protected channel<br>';
-	var s = "WEB-888: Single Board WebSDR<br>"+ s1 + try_again +
+	var s = "OpenZynqSDR: Single Board WebSDR<br>"+ s1 + try_again +
       w3_input('w3-retain-input-focus w3-margin-TB-8/w3-label-inline w3-label-not-bold/kiwi-pw|padding:1px|size=40', 'Password:', 'id-pwd', '', 'kiwi_ask_pwd_cb') +
       s2;
 
@@ -386,7 +386,7 @@ function kiwi_valpwd1_cb(badp, p)
 	   kiwi_show_msg('Admin connection not allowed from this ip address.');
 	} else
 	if (badp == kiwi.BADP_NO_ADMIN_PWD_SET) {
-	   kiwi_show_msg('No admin password set. Can only connect from same local network as Web-888.<br>Client ip = '+ client_public_ip);
+	   kiwi_show_msg('No admin password set. Can only connect from same local network as the receiver.<br>Client ip = '+ client_public_ip);
 	} else
 	if (badp == kiwi.BADP_NO_MULTIPLE_CONNS) {
 	   kiwi_show_msg('Multiple connections from the same ip address not allowed.<br>Client ip = '+ client_public_ip);
@@ -2429,7 +2429,7 @@ function cpu_stats_cb(o, uptime_secs, waterfall_fps)
 	if (days) s += days +'d:';
 	s += hr +':'+ min.leadingZeros(2) +':'+ sec.leadingZeros(2);
 	w3_innerHTML('id-status-config',
-      w3_text('w3-text-css-orange', 'Web-888'),
+      w3_text('w3-text-css-orange', 'Receiver'),
       w3_text('', s +', '+ kiwi_config_str)
 	);
 
@@ -2844,7 +2844,7 @@ function kiwi_init_cfg(stream_name)
    kiwi_set_freq_offset(cfg.freq_offset);
    
    var page_title = kiwi_decodeURIComponent('PAGE_TITLE', cfg.index_html_params.PAGE_TITLE);
-   if (page_title == '') page_title = 'WEB-888';
+   if (page_title == '') page_title = 'OpenZynqSDR';
    var el = w3_el('id-page-title');    // in user and admin html
    if (el) el.innerHTML = ((stream_name == 'admin')? 'Admin ':'') + page_title;
    w3_innerHTML('id-rx-photo-title', kiwi_decodeURIComponent('RX_PHOTO_TITLE', cfg.index_html_params.RX_PHOTO_TITLE));

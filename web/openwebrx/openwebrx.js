@@ -10247,7 +10247,7 @@ function panels_setup()
 	w3_el('id-news').style.backgroundColor = news_color;
 	w3_el("id-news-inner").innerHTML =
 		'<span style="font-size: 14pt; font-weight: bold;">' +
-			'Web-888 launched'
+			'Receiver launched'
 		'</span>' +
 		'';
 

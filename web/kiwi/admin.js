@@ -120,9 +120,9 @@ function control_html()
 		w3_third('w3-valign', '',
          w3_div('',
             w3_div('',
-               w3_button('w3-aqua w3-margin', 'This server restart', 'control_restart_cb'),
-               w3_button('w3-blue w3-margin', 'This server reboot', 'control_reboot_cb'),
-               w3_button('w3-red w3-margin', 'This server power off', 'control_power_off_cb')
+               w3_button('w3-aqua w3-margin', 'This server app restart', 'control_restart_cb'),
+               w3_button('w3-blue w3-margin', 'This server HW reboot', 'control_reboot_cb'),
+               w3_button('w3-red w3-margin', 'This server HW power off', 'control_power_off_cb')
             )
          ),
          //w3_div('w3-center',
@@ -360,7 +360,7 @@ function control_confirm_cb()
 	} else
 	if (pending_power_off) {
 		ext_send('SET power_off');
-		wait_then_reload_page(0, 'Powering off Web-888');
+		wait_then_reload_page(0, 'Powering off receiver');
 	} else {
 	   w3_call(control_confirm_cb_func);
 	}
@@ -411,7 +411,7 @@ function connect_html()
 		
       '<hr>' +
       w3_divs('w3-container/w3-tspace-8',
-         w3_label('w3-bold', 'What domain name or IP address will people use to connect to your Web-888?<br>' +
+         w3_label('w3-bold', 'What domain name or IP address will people use to connect to your receiver?<br>' +
             'If you are listing on rx.rx-888.com this information will be part of your entry.<br>' +
             'Click one of the five options below and enter any additional information:<br><br>'),
          
@@ -2113,7 +2113,7 @@ function log_html()
 		w3_div('w3-container',
 		   w3_inline('w3-valign w3-halign-space-between/',
 		      w3_div('',
-               w3_label('w3-show-inline', 'Web-888 server log (scrollable list, first and last set of messages)'),
+               w3_label('w3-show-inline', 'Receiver server log (scrollable list, first and last set of messages)'),
                w3_button('w3-aqua|margin-left:10px', 'Log state', 'log_state_cb'),
                w3_button('w3-aqua|margin-left:10px', 'Log IP blacklist', 'log_blacklist_cb'),
                w3_button('w3-blue|margin-left:10px', 'Clear Histogram', 'log_clear_hist_cb')
@@ -2218,15 +2218,15 @@ function console_html()
 
             w3_button('w3-aqua|margin-left:16px', 'htop', 'console_cmd_cb', 'console_input_cb|TERM=xterm htop'),
             
-            w3_button('w3-yellow|margin-left:16px', 'disk free', 'console_cmd_cb', 'console_input_cb|df -H /media/mmcblk0p1'),
+            w3_button('w3-yellow|margin-left:16px', 'disk free', 'console_cmd_cb', 'console_input_cb|df -H'),
 
-            w3_button('w3-aqua|margin-left:16px', 'enable hotspot', 'console_cmd_cb', 'console_input_cb|/root/wifi/hotspot.sh'),
+            //w3_button('w3-aqua|margin-left:16px', 'enable hotspot', 'console_cmd_cb', 'console_input_cb|/root/wifi/hotspot.sh'),
 
             w3_button('w3-blue|margin-left:16px', 'ping DNS', 'console_cmd_cb',
                'console_input_cb|ping -c3 1.1.1.1; ping -c3 8.8.8.8'),
 
-            w3_button('w3-blue|margin-left:16px', 'ping rx-888', 'console_cmd_cb',
-               'console_input_cb|ping -c3 www.rx-888.com')
+            w3_button('w3-blue|margin-left:16px', 'ping Google', 'console_cmd_cb',
+               'console_input_cb|ping -c3 www.google.com')
          ),
          
 			w3_div('id-console-msg w3-margin-T-8 w3-text-output w3-scroll-always-y w3-scroll-down w3-small w3-text-black|background-color:#a8a8a8',
@@ -2598,7 +2598,7 @@ function security_html()
 			'you want to allow user connections without needing a password. <br>' +
 			'If below "Admin auto-login from local net even if password set" is set to "No", ' +
 			'<i>and you forget the admin password</i>, then you\'ll have no way to bring up the admin page. <br>' +
-			'In that case the only way to recover is to ssh/PuTTY into Debian on the Web-888 and remove the password encryption files manually.' +
+			'In that case the only way to recover is to ssh/PuTTY into Debian on the receiver and remove the password encryption files manually.' +
 			'</h5></header>'
 		) +
 	*/
@@ -2808,13 +2808,13 @@ function admin_draw(sdr_mode)
 			
 			w3_divs('id-restart w3-hide/w3-valign',
 				'<header class="w3-show-inline-block w3-container w3-red"><h5>Restart required for changes to take effect</h5></header>' +
-				w3_div('w3-show-inline-block', w3_button('w3-green w3-margin-L-16', 'Web-888 server restart', 'admin_restart_now_cb')) +
+				w3_div('w3-show-inline-block', w3_button('w3-green w3-margin-L-16', 'Receiver server restart', 'admin_restart_now_cb')) +
 				w3_div('w3-show-inline-block', w3_button('w3-yellow w3-margin-L-16', 'Cancel', 'admin_restart_cancel_cb'))
 			) +
 			
 			w3_divs('id-reboot w3-hide/w3-valign',
 				'<header class="w3-show-inline-block w3-container w3-red"><h5>Reboot required for changes to take effect</h5></header>' +
-				w3_div('w3-show-inline-block', w3_button('w3-green w3-margin-L-16', 'Web-888 reboot', 'admin_reboot_now_cb')) +
+				w3_div('w3-show-inline-block', w3_button('w3-green w3-margin-L-16', 'Receiver reboot', 'admin_reboot_now_cb')) +
 				w3_div('w3-show-inline-block', w3_button('w3-yellow w3-margin-L-16', 'Cancel', 'admin_reboot_cancel_cb'))
 			) +
 			
@@ -2823,7 +2823,7 @@ function admin_draw(sdr_mode)
 			) +
 
 			w3_div('id-build-reboot w3-valign w3-hide',
-				'<header class="w3-container w3-red"><h5>Web-888 will reboot after build</h5></header>'
+				'<header class="w3-container w3-red"><h5>Receiver will reboot after build</h5></header>'
 			) +
 
 			w3_div('id-admin-closed w3-valign w3-hide',
@@ -3194,7 +3194,7 @@ function w3_reboot_cb()
 function admin_restart_now_cb()
 {
 	ext_send('SET restart');
-	wait_then_reload_page(10, 'Restarting Web-888 server');
+	wait_then_reload_page(10, 'Restarting server');
 }
 
 function admin_restart_cancel_cb()
@@ -3206,7 +3206,7 @@ function admin_restart_cancel_cb()
 function admin_reboot_now_cb()
 {
 	ext_send('SET reboot');
-	wait_then_reload_page(45, 'Rebooting Web-888');
+	wait_then_reload_page(45, 'Rebooting receiver');
 }
 
 function admin_reboot_cancel_cb()

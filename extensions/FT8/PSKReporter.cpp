@@ -273,7 +273,7 @@ static u1_t *pr_rx_info(u1_t *bp)
     bp = pr_emit_string(bp, pr->rgrid);
     if (pr->have_ant) bp = pr_emit_string(bp, pr->ant);
     
-    const char *client = "web-888";
+    const char *client = "OpenZynqSDR";
     bp = pr_emit_string(bp, client);
     
     while (((bp - bbp) % 4) != 0) *bp++ = 0;

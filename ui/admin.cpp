@@ -167,7 +167,7 @@ static void console_task(void* param) {
     char* buf = (char*)kiwi_imalloc("console", NBUF + SPACE_FOR_NULL);
     int i, n, err;
 
-    char* args[] = { (char*)"/bin/sh", (char*)"--login", NULL };
+    char* args[] = { (char*)"/bin/sh", (char*)"-l", NULL };
     scall("forkpty", (c->console_child_pid = forkpty(&c->master_pty_fd, NULL, NULL, NULL)));
 
     if (c->console_child_pid == 0) { // child
