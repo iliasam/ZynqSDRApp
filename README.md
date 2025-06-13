@@ -1,8 +1,9 @@
 # OpenZynqSDRApp  
 Under development.
   
-Linux Application of the OpenZynqSDR receiver.
-See: https://habr.com/ru/articles/898490  
+Linux Application of the OpenZynqSDR receiver.  
+See this article (Russian): https://habr.com/ru/articles/898490  
+See also Zynq hardware description and FPGA sources: https://github.com/iliasam/OpenZynqSDR_HW  
 This code is forked from Web-888, which is forked from KiwiSDR project: https://github.com/RaspSDR/server  
 
 **Configuration files**  
@@ -13,7 +14,7 @@ DIR_SAMPLES="/home/ubuntu/sdr/config/samples"
   
 **Kernel module**  
 This App is receiving data from FPGA throw kernel module "sdrdma".  
-You can find its sources is the "kernel_dma_driver" folder.  
+You can find its sources in the "kernel_dma_driver" folder.  
   
 **Needed dependencies:**  
 ```
