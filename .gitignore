@@ -5,3 +5,15 @@ debug
 .stignore
 .stfolder/
 .vscode/
+config/samples/ALE.test.12k.au
+config/samples/ALE.test.8k.au
+config/samples/ALE.zkd.AMD.12k.au
+config/samples/ALE.zkd.AMD.8k.au
+config/samples/CW.test.au
+config/samples/digi.test.au
+config/samples/DRM.BBC.Journaline.au
+config/samples/DRM.KTWR.slideshow.au
+config/samples/FT8.test.au
+config/samples/HFDL_test_12k_cf13270_df13270.wav
+config/samples/SSTV.test.au
+config/samples/WSPR.test.au

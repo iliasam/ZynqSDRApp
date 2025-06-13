@@ -2,8 +2,15 @@
 Under development.
   
 Linux Application of the OpenZynqSDR receiver.
-See: https://habr.com/ru/articles/898490
+See: https://habr.com/ru/articles/898490  
+This code is forked from Web-888, which is forked from KiwiSDR project: https://github.com/RaspSDR/server  
 
+**Configuration files**  
+Application is need to have configuration files. They are placed at the "config" folder of this repo.  
+Path to the config folder at the target computer (where is the app is executed) is set at CMakeLists.txt:  
+DIR_CFG="/home/ubuntu/sdr/config"  
+DIR_SAMPLES="/home/ubuntu/sdr/config/samples"  
+  
 **Kernel module**  
 This App is receiving data from FPGA throw kernel module "sdrdma".  
 You can find its sources is the "kernel_dma_driver" folder.  
@@ -31,5 +38,5 @@ cmake ..
 cmake --build .
 ```
 
-This code is forked from Web-888, which is forked from KiwiSDR project: https://github.com/RaspSDR/server  
+
 

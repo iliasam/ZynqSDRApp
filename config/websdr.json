@@ -1,0 +1,356 @@
+{
+   "inactivity_timeout_mins": 0,
+   "status_msg": "Find out more information: %3Ca href='http://github.com/iliasam/OpenZynqSDRApp' target='_blank'%3EGithub%3C/a%3E",
+   "index_html_params": {
+      "RX_PHOTO_LEFT_MARGIN": true,
+      "HTML_HEAD": "",
+      "PAGE_TITLE": "OpenZynqSDR",
+      "RX_PHOTO_FILE": "kiwi.config/photo.upload",
+      "RX_PHOTO_HEIGHT": 200,
+      "RX_PHOTO_TITLE": "OpenZynqSDR",
+      "RX_PHOTO_DESC": "",
+      "RX_TITLE": "OpenZynqSDR",
+      "RX_LOC": "Location is not set",
+      "RX_QRA": "JJ00",
+      "RX_ASL": "30m",
+      "RX_GMAP": "-0.0,0.0"
+   },
+   "init": {
+      "mode": "lsb",
+      "ceil_dB": 5,
+      "floor_dB": 0,
+      "max_dB": -10,
+      "min_dB": -110,
+      "rf_attn": 0,
+      "aperture": 1,
+      "colormap": 0,
+      "cw_offset": 500,
+      "freq": 5000,
+      "zoom": 0,
+      "AM_BCB_chan": 0,
+      "ITU_region": 0
+   },
+   "rx_name": "0-30 MHz SDR",
+   "rx_device": "WEB-888",
+   "rx_location": "Not set",
+   "rx_grid": "JJ00",
+   "rx_asl": 0,
+   "rx_antenna": "Magnetic Loop",
+   "rx_gps": "(0.000000, 0.000000)",
+   "server_url": "",
+   "admin_email": "your_email@example.com",
+   "passbands": {
+      "am": {
+         "lo": -4900,
+         "hi": 4900,
+         "c": 0,
+         "lock": false
+      },
+      "amn": {
+         "lo": -2500,
+         "hi": 2500
+      },
+      "sam": {
+         "lo": -4900,
+         "hi": 4900
+      },
+      "sal": {
+         "lo": -4900,
+         "hi": 0
+      },
+      "sau": {
+         "lo": 0,
+         "hi": 4900
+      },
+      "sas": {
+         "lo": -4900,
+         "hi": 4900
+      },
+      "qam": {
+         "lo": -4900,
+         "hi": 4900
+      },
+      "drm": {
+         "lo": -5000,
+         "hi": 5000
+      },
+      "lsb": {
+         "lo": -2700,
+         "hi": -300
+      },
+      "lsn": {
+         "lo": -2400,
+         "hi": -300
+      },
+      "usb": {
+         "lo": 300,
+         "hi": 2700
+      },
+      "usn": {
+         "lo": 300,
+         "hi": 2400
+      },
+      "cw": {
+         "lo": 300,
+         "hi": 700
+      },
+      "cwn": {
+         "lo": 470,
+         "hi": 530
+      },
+      "nbfm": {
+         "lo": -6000,
+         "hi": 6000
+      },
+      "nnfm": {
+         "lo": -3000,
+         "hi": 3000
+      },
+      "iq": {
+         "lo": -5000,
+         "hi": 5000
+      }
+   },
+   "freq_offset": 0,
+   "ip_limit_mins": 0,
+   "DC_offset_I": 0,
+   "DC_offset_Q": 0,
+   "DRM": {
+      "test_file2": "DRM.KTWR.slideshow.au",
+      "test_file1": "DRM.BBC.Journaline.au",
+      "nreg_chans": 7,
+      "enable": true
+   },
+   "tdoa": {
+      "server": "http://tdoa.rx-888.com"
+   },
+   "owner_info": "",
+   "reason_disabled": "",
+   "S_meter_cal": 40,
+   "waterfall_cal": 10,
+   "contact_admin": false,
+   "chan_no_pwd": 0,
+   "clk_adj": -4516,
+   "sdr_hu_lo_kHz": 0,
+   "sdr_hu_hi_kHz": 30000,
+   "ext_ADC_clk": false,
+   "ext_ADC_freq": 0,
+   "ADC_clk2_corr": 0,
+   "tdoa_id": "",
+   "tdoa_nchans": -1,
+   "ext_api_nchans": 8,
+   "no_wf": false,
+   "test_webserver_prio": false,
+   "test_deadline_update": false,
+   "rf_attn_allow": 1,
+   "S_meter_OV_counts": 10,
+   "webserver_caching": true,
+   "overload_mute": -15,
+   "agc_thresh_smeter": true,
+   "n_camp": 4,
+   "snr_meas_interval_hrs": 1,
+   "snr_local_time": true,
+   "any_preempt_autorun": true,
+   "ident_len": 16,
+   "show_geo": true,
+   "show_1Hz": true,
+   "dx_default_db": 1,
+   "spectral_inversion": false,
+   "nb_algo": 0,
+   "nb_wf": 1,
+   "nb_gate": 100,
+   "nb_thresh": 50,
+   "nb_thresh2": 0.95,
+   "nb_taps": 10,
+   "nb_samps": 7,
+   "nr_algo": 0,
+   "nr_de": 1,
+   "nr_an": 0,
+   "nr_wdspDeTaps": 64,
+   "nr_wdspDeDelay": 16,
+   "nr_wdspDeGain": 10,
+   "nr_wdspDeLeak": 7,
+   "nr_wdspAnTaps": 64,
+   "nr_wdspAnDelay": 16,
+   "nr_wdspAnGain": 10,
+   "nr_wdspAnLeak": 7,
+   "nr_origDeDelay": 1,
+   "nr_origDeBeta": 0.05,
+   "nr_origDeDecay": 0.98,
+   "nr_origAnDelay": 48,
+   "nr_origAnBeta": 0.125,
+   "nr_origAnDecay": 0.99915,
+   "nr_specGain": 0,
+   "nr_specAlpha": 0.95,
+   "nr_specSNR": 30,
+   "WSPR": {
+      "spot_log": true,
+      "syslog": false,
+      "GPS_update_grid": false,
+      "autorun": 0,
+      "preempt12": 0,
+      "autorun12": 0,
+      "preempt11": 0,
+      "autorun11": 0,
+      "preempt10": 0,
+      "autorun10": 0,
+      "preempt9": 0,
+      "autorun9": 0,
+      "preempt8": 0,
+      "autorun8": 0,
+      "preempt7": 0,
+      "autorun7": 0,
+      "preempt6": 0,
+      "autorun6": 0,
+      "preempt5": 0,
+      "autorun5": 0,
+      "preempt4": 0,
+      "autorun4": 0,
+      "preempt3": 0,
+      "autorun3": 0,
+      "preempt2": 0,
+      "autorun2": 0,
+      "preempt1": 0,
+      "autorun1": 0,
+      "preempt0": 0,
+      "autorun0": 0,
+      "grid": "KO85PT",
+      "callsign": "ua3053swl",
+      "BFO": "",
+      "test_file": "WSPR.test.au",
+      "enable": true
+   },
+   "ft8": {
+      "spot_log": false,
+      "syslog": false,
+      "GPS_update_grid": false,
+      "dT_adj": -1,
+      "SNR_adj": -22,
+      "autorun": 0,
+      "preempt12": 0,
+      "autorun12": 0,
+      "preempt11": 0,
+      "autorun11": 0,
+      "preempt10": 0,
+      "autorun10": 0,
+      "preempt9": 0,
+      "autorun9": 0,
+      "preempt8": 0,
+      "autorun8": 0,
+      "preempt7": 0,
+      "autorun7": 0,
+      "preempt6": 0,
+      "autorun6": 0,
+      "preempt5": 0,
+      "autorun5": 0,
+      "preempt4": 0,
+      "autorun4": 0,
+      "preempt3": 0,
+      "autorun3": 0,
+      "preempt2": 0,
+      "autorun2": 0,
+      "preempt1": 0,
+      "autorun1": 0,
+      "preempt0": 0,
+      "autorun0": 0,
+      "grid": "KO85PT",
+      "callsign": "UA3053SWL",
+      "enable": true
+   },
+   "sdr_hu_dom_sel": 4,
+   "adc_pga": 0,
+   "adc_dither": 0,
+   "reason_kicked": "",
+   "sdr_hu_dom_name": "",
+   "sdr_hu_dom_ip": "",
+   "led_brightness": 0,
+   "CAT_baud": 0,
+   "ale_2g": {
+      "admin_menu": "{\n// Data in JSON format.\n// Double-slash comments MUST start in column one!\n// Underscores in net/station names are converted to line breaks in menu entries.\n// A zero as the first element of the frequency array converts to a \"scan\" menu entry.\n// I.e. if a net consists of a single frequency the zero would be left out as there is nothing to scan.\n// \"lsb\" as the second element of the frequency array selects LSB mode for all entries.\n\n    \"Admin-1\": [1111],\n    \"Admin-2\": [0, 2222, 3333, 4444],\n    \"Admin-3_Test\": [0, 5555.5, 6666.6],\n    \"Admin-LSB\": [0, \"lsb\", 7777.7, 8888.8]\n}\n",
+      "enable": true
+   },
+   "ant_switch": {
+      "denyswitching": 0,
+      "denymixing": "",
+      "denymultiuser": "",
+      "thunderstorm": "",
+      "ant0desc": "",
+      "ant1desc": "",
+      "ant1high_side": false,
+      "ant1offset": 0,
+      "ant2desc": "",
+      "ant2high_side": false,
+      "ant2offset": 0,
+      "ant3desc": "",
+      "ant3high_side": false,
+      "ant3offset": 0,
+      "ant4desc": "",
+      "ant4high_side": false,
+      "ant4offset": 0,
+      "ant5desc": "",
+      "ant5high_side": false,
+      "ant5offset": 0,
+      "ant6desc": "",
+      "ant6high_side": false,
+      "ant6offset": 0
+   },
+   "cw": {
+      "enable": true
+   },
+   "digi_modes": {
+      "enable": true
+   },
+   "fax": {
+      "enable": true
+   },
+   "fft": {
+      "enable": true
+   },
+   "fsk": {
+      "test_file": "FSK.test.12k.au",
+      "enable": true
+   },
+   "iframe": {
+      "src": 0,
+      "url": "",
+      "html": "",
+      "title": "",
+      "width": 0,
+      "height": 0,
+      "help": "",
+      "enable": true
+   },
+   "iq_display": {
+      "enable": true
+   },
+   "loran_c": {
+      "gri0": "",
+      "gri1": "",
+      "enable": true
+   },
+   "navtex": {
+      "test_file": "NAVTEX.test.12k.au",
+      "enable": true
+   },
+   "S_meter": {
+      "range_i": 0,
+      "marker_i": 0,
+      "maxdb": -30,
+      "mindb": -130,
+      "speed_i": 13,
+      "averaging": true,
+      "timestamp": false,
+      "show_adc_ovfl": true,
+      "tstamp_tz": 0,
+      "enable": true
+   },
+   "sstv": {
+      "enable": true
+   },
+   "timecode": {
+      "enable": true
+   },
+   "cws": {
+      "enable": true
+   }
+}
