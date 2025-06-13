@@ -42,5 +42,8 @@ cmake --build .
 SDR design:  
 <img src="https://github.com/iliasam/OpenZynqSDRApp/blob/develop/SDR_Design.png">  
 
+**Proxy**  
+KiwiSDR and Web-888 are using frp (https://github.com/fatedier/frp) as a reverce proxy. I never tested my code with frp, so it is possible that there may be problems.  
+
 
 
