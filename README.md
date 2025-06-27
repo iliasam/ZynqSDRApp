@@ -18,11 +18,11 @@ You can find its sources in the "kernel_dma_driver" folder.
   
 **Needed dependencies:**  
 ```
-sudo apt install install build-essential make cmake  
-sudo apt install install pkgconf  
-sudo apt install install fdk-aac-dev  
-sudo apt install install libgps-dev  
-sudo apt install install liblapack-dev libfftw3-dev  
+sudo apt install build-essential make cmake  
+sudo apt install pkgconf  
+sudo apt install fdk-aac-dev  
+sudo apt install libgps-dev  
+sudo apt install liblapack-dev libfftw3-dev  
 sudo apt install libunwind-dev  
 sudo apt install libsqlite3-dev  
 sudo apt install libcurl4-openssl-dev  
