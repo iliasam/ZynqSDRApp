@@ -5,6 +5,7 @@ Linux Application of the OpenZynqSDR receiver - WEB SDR, based on "Antminer S9" 
 See this article (Russian): https://habr.com/ru/articles/898490  
 See also Zynq hardware description and FPGA sources: https://github.com/iliasam/OpenZynqSDR_HW  
 This code is forked from Web-888 project, which is forked from KiwiSDR project: https://github.com/RaspSDR/server and https://github.com/jks-prv/KiwiSDR  
+Build files: https://disk.yandex.ru/d/__vgkx1kbGi68w  
 
 **Configuration files**  
 Application is need to have configuration files. They are placed at the "config" folder of this repo.  
